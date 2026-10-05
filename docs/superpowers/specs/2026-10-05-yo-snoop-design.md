@@ -43,6 +43,8 @@ participant is present, and passes every negative control in §9.
 | D17 | Snoop's Google account communicates only by speaking in a meeting when allowed and by Chat to Brett, Jeremy and Lindsay. |
 | D18 | Spoken answers: 3 sentences, then ask the room if they want more and on what; continue in ~75 s chunks that end on a complete thought, asking again after each. |
 | D19 | v2 direction: Snoop's own MCP server reading a Google Drive folder for the meeting (code or document sets), not only the Agent-C repo. Out of v1. §7.1. |
+| D20 | v1 uses Pipecat (Conductor pipeline), repomix (repo map) and Serena (code navigation). Each one's speed is re-measured in rehearsal before it is relied on. |
+| D21 | Serena's editing tools are removed before it is added (§5.3.1). |
 
 ## 3. Components
 
@@ -60,8 +62,12 @@ participant is present, and passes every negative control in §9.
    permitted). Joins Meet as `agent-c@startup.ai`, transcribes from Meet's own
    closed captions (`meeting_closed_captions` provider), speaks via its built-in
    Google TTS.
-2. **Conductor** (our code). Wake/stop detection, room check, asker check,
-   delivery choice, brain routing. §4.
+2. **Conductor** (our code, built on [Pipecat](https://github.com/pipecat-ai/pipecat),
+   BSD-2, D20). Wake/stop detection, room check, asker check, delivery choice,
+   brain routing, pacing. §4. Pipecat supplies the streaming pipeline: the
+   brain's answer streams back and is spoken sentence by sentence, so the first
+   word does not wait for the whole answer; it also handles interruption (the
+   "peanut butter" cut). Requires the brain connector to stream text.
 3. **Chat poster.** Google Chat app (service account, `chat.bot` scope). Posts
    only to the one configured space ID; any other destination is refused in code.
 
@@ -76,7 +82,12 @@ per-Mac brain connection keys. **No Anthropic key. No GitHub token.**
 5. **Sandboxed Claude Code (headless)**, run as macOS user `snoop`. §5.
 6. **Knowledge refresher.** Fetches the `snoop` user's read-only Agent-C clone
    (all branches) before each meeting. On Brett's Mac it also builds the
-   `AGENT_C_HOME` bundle (§5.2).
+   `AGENT_C_HOME` bundle (§5.2). It also builds the **repo map** with
+   [repomix](https://github.com/yamadashy/repomix) (MIT, D20): a compressed,
+   single-file view of the clone, loaded as the brain session's cached prefix.
+   Size budget and include filters are set in the plan (Agent-C is too large to
+   pack whole). repomix's built-in secret check runs, and the §5.4 secret scan
+   runs on the map too; a hit blocks the map, not the meeting.
 
 **Routing:** the VM uses the first connected brain in the order Brett → Jeremy →
 Lindsay. None online → Snoop says "no brain online".
@@ -182,6 +193,42 @@ questions); deep dives 15–60 s.
 - **Known soft spot:** some `git` flags write files (e.g. `--output`). `snoop`
   can only write in its own home, which is why 5.1 is the wall.
 
+### 5.3.1 Serena, editing tools removed (D20, D21)
+
+[Serena](https://github.com/oraios/serena) (GPL-3.0; internal use) gives the
+brain symbol-level code navigation. Its editing, shell, memory-write and
+project-switching tools are **removed before it is added**, in three
+independent layers:
+
+1. **Serena's own config** (installer-owned, not writable by `snoop`):
+   `read_only: true` in the project definition, plus `excluded_tools` listing
+   every tool not in the keep list below. Serena's web dashboard is disabled.
+   The project is fixed at launch; no project switching.
+2. **Claude Code allow-list** names only the kept Serena tools (5.3 rules apply:
+   anything unlisted is denied).
+3. **Startup assertion:** before a meeting, the brain lists the tools Serena
+   actually exposes and **refuses to start** if any tool outside the keep list
+   is present. Reason: Serena's changelog records a bug (#1938) where
+   `read_only` was not applied to the base tool set in single-project context.
+   Serena is pinned to a version after that fix and upgraded deliberately.
+
+**Keep (read-only),** from Serena's source 2026-10-05: `read_file`, `list_dir`,
+`find_file`, `search_for_pattern`, `get_symbols_overview`, `find_symbol`,
+`find_referencing_symbols`, `find_implementations`, `find_declaration`,
+`get_diagnostics_for_file`, `get_diagnostics_for_symbol`, `read_memory`,
+`list_memories`.
+
+**Removed:** all file editing (`create_text_file`, `replace_content`,
+`replace_in_files`, `delete_lines`, `replace_lines`, `insert_at_line`); all
+symbol editing (`replace_symbol_body`, `insert_after_symbol`,
+`insert_before_symbol`, `rename_symbol`); memory writes (`write_memory`,
+`delete_memory`, `rename_memory`, `edit_memory`, `onboarding`);
+`execute_shell_command`; `serena_repl` (code execution); `open_dashboard`;
+`activate_project`, `remove_project`, `query_project`,
+`list_queryable_projects`; `restart_language_server`.
+Exact tool names are confirmed against the pinned version's live tool list in
+the plan (class names above map to these snake-case names).
+
 ### 5.4 Answer gate (on the Mac, before an answer leaves)
 
 - Secret scan (patterns from Agent-C `scripts/agent-c-export-audit.js` plus key
@@ -255,7 +302,16 @@ Not designed yet; recorded so v1 does not block it.
 
 Verified 2026-10-05: Attendee supports Meet captions transcription and Google TTS
 output (source); Meet Media API is receive-only (Google docs); Attendee license
-is ELv2; registry-mcp has no read-only mode and honors `AGENT_C_HOME`.
+is ELv2; registry-mcp has no read-only mode and honors `AGENT_C_HOME`;
+Serena has `read_only` and `excluded_tools` settings and its tool classes are as
+listed in §5.3.1; Pipecat (BSD-2), repomix (MIT) and Serena (GPL-3.0) were all
+pushed within the last 3 months.
+
+**Considered and not in v1** (2026-10-05 survey): faster-whisper, moonshine,
+WhisperLive, whisper.cpp (fallback B candidates); silero-vad (needs raw audio);
+claude-context (sends code to embedding/vector services by default); Vexa
+(Apache-2.0 Meet bot, but its speak endpoint returns 404 in v0.12 — watch for a
+v2 product path).
 
 ## 9. Testing and acceptance
 
@@ -266,7 +322,10 @@ brain routing order; Chat poster refuses any non-configured space.
 
 **Sandbox (each Mac):** 5.1 negative control; a prompt to write a file is
 refused; a registry-mcp write tool is refused and a before/after hash shows the
-real `~/.agent-c` unchanged; a planted fake key is blocked by the answer gate.
+real `~/.agent-c` unchanged; a planted fake key is blocked by the answer gate;
+Serena's exposed tool list equals the keep list exactly, and a config with one
+editing tool re-enabled makes the brain refuse to start (negative control);
+a planted fake key in the repo is caught before it reaches the repo map.
 
 **End-to-end rehearsal** (test Meet, `agent-c@` + two team accounts):
 - Acceptance questions from the 2026-10-05 standup, graded by Brett:
