@@ -41,6 +41,8 @@ participant is present, and passes every negative control in §9.
 | D15 | v1 brain on Brett's Mac uses registry-mcp read tools. **v2 requirement:** registry-mcp works on Jeremy's and Lindsay's Macs. |
 | D16 | Owner's macOS home is set to `700` by the installer. |
 | D17 | Snoop's Google account communicates only by speaking in a meeting when allowed and by Chat to Brett, Jeremy and Lindsay. |
+| D18 | Spoken answers: 3 sentences, then ask the room if they want more and on what; continue in ~75 s chunks that end on a complete thought, asking again after each. |
+| D19 | v2 direction: Snoop's own MCP server reading a Google Drive folder for the meeting (code or document sets), not only the Agent-C repo. Out of v1. §7.1. |
 
 ## 3. Components
 
@@ -111,12 +113,30 @@ dedicated Anthropic API key in its own Console workspace with a monthly spend li
    record → ignored. Mixed room: asker must also be brett@, jeremy@ or lindsay@.
 6. **Route to brain.** Question + room verdict sent to the routed Mac.
 7. **Deliver.**
-   - All-team room: speak, max 3 sentences; longer answers go to Chat with a
-     one-line spoken summary. Deep dives (>~5 s): say "lemme dig in the repo",
-     post the answer to Chat when ready.
+   - All-team room: speak per the pacing rule below. Deep dives (>~5 s): say
+     "lemme dig in the repo", post the answer to Chat when ready.
    - Mixed room: post to Chat @-mentioning the asker; speak only "sent it to Chat".
 8. **Re-check before every spoken sentence.** If the room has turned mixed, stop
    speaking and post the remainder to Chat.
+
+**Pacing rule (D18).** Applies to every spoken answer.
+
+1. **Opening:** at most 3 sentences.
+2. **Check-in:** if more remains, ask the room "want more? on what?" and listen
+   ~8 s. Any participant allowed to ask (§4 step 5) can reply, without the wake
+   phrase:
+   - "yes" / "go on" → next chunk.
+   - A focus ("more on the cost part") → treated as a follow-up question;
+     the next chunk answers that.
+   - "no", or silence → stop speaking.
+3. **Chunks:** ~75 s of speech each (about 190 words), approximate. A chunk
+   always ends at the end of a complete thought, never mid-sentence or
+   mid-point: the brain returns the answer as ordered self-contained points,
+   and the Conductor cuts only between points, letting a chunk run past 75 s
+   rather than split a point. After each chunk, check in again (step 2).
+4. **Nothing is lost:** whenever an answer stops before its end — declined,
+   silence, "peanut butter", room turned mixed — the full answer posts to Chat.
+5. "Peanut butter" and the per-sentence room re-check override pacing at all times.
 
 **Persona:** system prompt carries `snoop.md` with two meeting overrides: curse
 words off; the "identifiers written straight" rule applies to Chat text only.
@@ -197,6 +217,31 @@ cost, latency. Kept 7 days. No meeting transcript storage beyond this.
 - Imitating Snoop Dogg's real voice.
 - Zoom, Teams, or meetings Snoop was not invited to.
 - Any communication from `agent-c@` other than meeting speech and team Chat.
+- Knowledge sources other than the Agent-C repo and registry (v2, §7.1).
+
+### 7.1 v2 direction: per-meeting Google Drive knowledge (D19)
+
+Not designed yet; recorded so v1 does not block it.
+
+- **Shape:** Snoop exposes its own MCP server to the brain, with read-only tools
+  over one Drive folder chosen per meeting (code or documents). A natural
+  default is the folder or files attached to the meeting's calendar event.
+- **v1 must not block it:** the brain's knowledge sources are a list in config,
+  not hard-coded to the Agent-C clone; the allow-list in §5.3 is generated from
+  that list.
+- **Open questions for the v2 design:**
+  - **Identity.** D17 and §3.3 turn Drive off for `agent-c@`. Reading Drive needs
+    either Drive on with Viewer-only sharing per folder, or a separate
+    read-only principal. Changes the account's blast radius.
+  - **Prompt injection from documents.** A shared doc can contain text aimed at
+    Snoop. Read-only tools and the answer gate limit damage; answer steering
+    is not prevented.
+  - **Who may point Snoop at a folder**, and whether outsiders' shared files are
+    ever eligible.
+  - **Product vs internal.** Value as a product conflicts with v1's
+    internal-only rule and with Attendee's ELv2 (no hosted service to third
+    parties). A product version needs its own meeting-bot layer or a
+    commercial license, and its own security review.
 
 ## 8. Unverified — confirm before the implementation plan
 
@@ -233,3 +278,6 @@ real `~/.agent-c` unchanged; a planted fake key is blocked by the answer gate.
   dial-in) joins mid-answer: speech stops; the remainder posts to Chat.
 - Any participant says "peanut butter": Snoop stays silent until "Yo Snoop";
   an in-flight deep dive still posts to Chat.
+- Pacing: a long answer stops after 3 sentences and asks; "yes" yields a chunk
+  of roughly 75 s that ends on a complete point; a focused reply redirects the
+  next chunk; silence stops speech and the full answer is in Chat.
