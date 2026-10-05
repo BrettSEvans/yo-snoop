@@ -45,6 +45,8 @@ participant is present, and passes every negative control in §9.
 | D19 | v2 direction: Snoop's own MCP server reading a Google Drive folder for the meeting (code or document sets), not only the Agent-C repo. Out of v1. §7.1. |
 | D20 | v1 uses Pipecat (Conductor pipeline), repomix (repo map) and Serena (code navigation). Each one's speed is re-measured in rehearsal before it is relied on. |
 | D21 | Serena's editing tools are removed before it is added (§5.3.1). |
+| D22 | Pre-loading in v1: listen to all-team meetings, spot topics, pre-load answers' material into one per-meeting brain session. Memory only; mixed rooms pause it. §4. |
+| D23 | Keep the clone: refreshed every 5 min during meetings, plus a PR/CI status file; refresher runs as the owner so `snoop` holds no GitHub credential. §3.2. |
 
 ## 3. Components
 
@@ -80,8 +82,15 @@ per-Mac brain connection keys. **No Anthropic key. No GitHub token.**
 4. **Brain connector.** Dials **out** to the VM over an authenticated, encrypted
    connection; no inbound port on any laptop. One revocable credential per Mac.
 5. **Sandboxed Claude Code (headless)**, run as macOS user `snoop`. §5.
-6. **Knowledge refresher.** Fetches the `snoop` user's read-only Agent-C clone
-   (all branches) before each meeting. On Brett's Mac it also builds the
+6. **Knowledge refresher (D23).** Runs as the **Mac's owner** (launchd), not as
+   `snoop`, so `snoop` holds no GitHub credential at all. Writes into a
+   directory `snoop` can read but not write. Fetches the Agent-C clone (all
+   branches) before each meeting and **every 5 minutes during one**, and writes
+   a **PR/CI status file** (open and recently merged PRs, review state, latest
+   CI result per branch) from the GitHub API, so the model gets that data with
+   no network access of its own. Snoop states the clone's age when it answers.
+   Unpushed work is invisible by design; push a WIP branch to show it to Snoop.
+   On Brett's Mac it also builds the
    `AGENT_C_HOME` bundle (§5.2). It also builds the **repo map** with
    [repomix](https://github.com/yamadashy/repomix) (MIT, D20): a compressed,
    single-file view of the clone, loaded as the brain session's cached prefix.
@@ -92,8 +101,14 @@ per-Mac brain connection keys. **No Anthropic key. No GitHub token.**
 **Routing:** the VM uses the first connected brain in the order Brett → Jeremy →
 Lindsay. None online → Snoop says "no brain online".
 
-**Mac credentials** (held by `snoop` only): fetch-only GitHub deploy key; a
-dedicated Anthropic API key in its own Console workspace with a monthly spend limit.
+**Mac credentials:**
+- **Owner (refresher):** fetch-only GitHub deploy key, and a fine-grained
+  read-only GitHub token (pull requests: read, actions: read, metadata) for the
+  PR/CI file. Never readable by `snoop`.
+- **`snoop`:** a dedicated Anthropic API key in its own Console workspace with a
+  monthly spend limit, supplied through Claude Code's key helper from `snoop`'s
+  login Keychain, never a plain file. Read deny rules cover `snoop`'s config
+  and credential paths; the §5.4 secret scan is the backstop.
 
 ### 3.3 Google Workspace setup for `agent-c@startup.ai`
 
@@ -152,7 +167,31 @@ dedicated Anthropic API key in its own Console workspace with a monthly spend li
 **Persona:** system prompt carries `snoop.md` with two meeting overrides: curse
 words off; the "identifiers written straight" rule applies to Chat text only.
 Target: first spoken word ~3 s after the question ends (snapshot-style
-questions); deep dives 15–60 s.
+questions); deep dives 15–60 s, less when pre-loaded (measured in rehearsal).
+
+**Pre-loading (D22).** Snoop listens to the whole meeting, not just questions,
+so answers start warm.
+
+1. **Rolling transcript:** the last ~5 min of captions, **in VM memory only**,
+   never written to disk or logs.
+2. **Topic spotting:** every ~30 s or on a subject change, a fast model (Haiku
+   4.5) extracts topics, ticket IDs, branch and file names from the window.
+3. **Pre-load:** the brain looks those up with its normal read-only tools.
+4. **One brain session per meeting:** a single headless Claude Code session
+   stays open for the meeting, starting from the repo map, accumulating
+   pre-loaded material, and reused by every question (prompt caching keeps it
+   fast and cheap). Follow-ups like "what did *that* cost?" resolve from it.
+5. **All-team rooms only:** the moment the room is mixed — or the participant
+   check fails — topic spotting stops and outsiders' speech is never sent
+   anywhere. It resumes when the room is all-team again.
+6. **Prepares, never speaks:** speech still needs "Yo Snoop". "Peanut butter"
+   mutes speech but does not stop pre-loading.
+7. **Out of v1:** pre-drafting answers to guessed questions.
+8. **Team notice:** Jeremy and Lindsay are told, before first use, that Snoop
+   hears the whole all-team meeting, not only wake-phrase questions.
+
+Pre-loading counts against the same monthly spend limit; its cost per meeting
+hour is measured in rehearsal.
 
 ## 5. Brain sandbox and answer gate
 
@@ -169,7 +208,9 @@ questions); deep dives 15–60 s.
 
 ### 5.2 What the brain reads
 
-- Its own Agent-C clone, all branches, fetch-only.
+- The Agent-C clone (all branches), the PR/CI status file and the repo map, all
+  written by the owner's refresher into a directory `snoop` can read but not
+  write (§3.2, D23).
 - **Brett's Mac only (v1):** an `AGENT_C_HOME` bundle — a copy of `~/.agent-c`
   with project paths rewritten to `snoop`'s clones — and registry-mcp started
   against it. Built as a self-contained bundle so v2 only has to transport it
@@ -239,7 +280,8 @@ the plan (class names above map to these snake-case names).
 ### 5.5 Logs
 
 Per question, on the answering Mac: question, room verdict, answer, tools used,
-cost, latency. Kept 7 days. No meeting transcript storage beyond this.
+cost, latency. Kept 7 days. Pre-loading logs topics and lookups only, never
+transcript text. No meeting transcript storage anywhere.
 
 ## 6. Failure modes
 
@@ -295,8 +337,10 @@ Not designed yet; recorded so v1 does not block it.
 1. Which principal the Meet REST participants call needs (organizer token vs the
    bot's own account) and its live polling latency.
 2. Meet caption latency and accuracy for the wake phrase in practice.
-3. Exact headless Claude Code flags/settings for the allow/deny lists in 5.3
-   (probe the real signature before relying on it).
+3. Exact headless Claude Code flags/settings for the allow/deny lists in 5.3,
+   the API key helper, and keeping one session open for a whole meeting
+   (streaming input or resume) for D22 (probe the real signature before relying
+   on it).
 4. Attendee SAML SSO setup against a Workspace OU-scoped profile.
 5. Google Chat app restricted to one space and three users at the Workspace level.
 
@@ -325,7 +369,14 @@ refused; a registry-mcp write tool is refused and a before/after hash shows the
 real `~/.agent-c` unchanged; a planted fake key is blocked by the answer gate;
 Serena's exposed tool list equals the keep list exactly, and a config with one
 editing tool re-enabled makes the brain refuse to start (negative control);
-a planted fake key in the repo is caught before it reaches the repo map.
+a planted fake key in the repo is caught before it reaches the repo map;
+as `snoop`, reading the owner's GitHub token or deploy key fails, and a prompt
+asking the brain to print its Anthropic key yields nothing (negative controls).
+
+**Pre-loading (VM):** while the room is mixed, no transcript text leaves the VM
+(assert zero brain/model calls carrying caption text); a participant-check
+failure also pauses it; a planted phrase spoken in a rehearsal is absent from
+every file and log on the VM and Macs afterwards.
 
 **End-to-end rehearsal** (test Meet, `agent-c@` + two team accounts):
 - Acceptance questions from the 2026-10-05 standup, graded by Brett:
