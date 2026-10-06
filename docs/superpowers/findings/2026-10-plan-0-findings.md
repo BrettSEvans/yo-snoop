@@ -60,3 +60,10 @@ the prefix is served from cache (1-hour ephemeral cache). Supports D22's one-ses
 **Consequences for Plan 1:** use the SDK (`ClaudeSDKClient`) for the brain, not the CLI, because only the SDK
 has `max_turns`/`max_budget_usd`; always pass `setting_sources=[]`, `strict_mcp_config=True`,
 `permission_mode="dontAsk"`, explicit `allowed_tools`. Repeat the Step 2–4 controls as the `snoop` user in Plan 1.
+
+**P3 addendum (2026-10-05):** Claude Code 2.1.283 has `--bare` — minimal mode that skips settings/plugin
+hooks, LSP, plugin sync, auto-memory, keychain reads and CLAUDE.md auto-discovery; in it, Anthropic auth is
+**strictly `ANTHROPIC_API_KEY` or `apiKeyHelper` via `--settings` (OAuth and keychain are never read)**.
+Consequences: Plan 1 should run the brain in bare mode (or the SDK equivalent) for isolation; and the
+production brain cannot run on a personal claude.ai subscription login in that mode — it needs an API key.
+Plan 0 testing on the owner's own login is unaffected.
