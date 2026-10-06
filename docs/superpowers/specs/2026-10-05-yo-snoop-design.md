@@ -57,6 +57,9 @@ participant is present, and passes every negative control in §9.
 | D31 | **Team roster** (2026-10-06): one file, `config/team.json` in this repo, lists every member — email, display name, host priority, `may_host`, `mixed_room_asker`. Adding a person is a roster change plus adding them to the Google Group `snoop-team@startup.ai` (Chat space membership and Chat app visibility follow the group) and running the installer on their Mac. No code names a person. |
 | D32 | **One Snoop per meeting** (2026-10-06): a Snoop that hears another seat's caption beginning "Snoop here" compares roster host priority; the lower-priority Snoop goes passive for the rest of the meeting (no speech, no Chat answers) and posts once to Chat that it stood down. Worst case both speak for about a second on the first answer. Team habit: one host per meeting. |
 | D33 | **Phasing (2026-10-06):** **Phase 1 — first working Snoop, target ~1 week**, runnable by any roster member on their own Mac: Chrome-profile seat + extension (captions, voice, card), wake / peanut-butter mute, room + asker checks, Chat delivery, D32 one-Snoop guard, sandboxed brain (clone, PR/CI file, repo map, read-only Serena; registry-mcp on Brett's Mac), answer gate, per-host installer. Spoken answers are at most 3 sentences, with anything longer posted in full to Chat. **Phase 2:** pre-loading (D22) and the 75-second pacing check-ins (D18 steps 2–3). |
+| D34 | **Runs from a local clone (2026-10-06):** no packaged installer. Each host runs `git clone`, then `./snoop setup` once (one admin password: creates the `snoop` user, sets the host's home to `700`, creates `/Users/Shared/snoop` readable by `snoop` but writable only by the host, and a sudoers rule letting the host start the brain as `snoop` without a password), then `./snoop start` before meetings, `git pull` to update. The refresher runs inside `./snoop start` (every 5 min while running) instead of a launchd job, and uses the host's existing git/`gh` login — no separate deploy key in Phase 1. |
+| D35 | **Brain key handling (2026-10-06):** the Snoop API key lives in the **host's** Keychain; `./snoop start` reads it and hands it to the brain on **stdin** at launch. It is never a file `snoop` can read, never on a command line, never in logs. `./snoop start --dev` runs the brain as the host on the host's own Claude login, sandbox off, for development only (D25). |
+| D36 | **Phase 1 delivery is a small asyncio pipeline** (brain answer → gate → per-sentence room re-check → Google TTS → extension); Pipecat (D20) is evaluated in Phase 2, when pre-loading and pacing need streaming and interruption handling. Phase 1 speaks once the brain's full answer is ready. |
 
 ## 3. Components
 
@@ -113,7 +116,7 @@ Snoop's code never reads Chrome's cookies or storage.
 
 5. **Sandboxed Claude Code (headless, via the Agent SDK)**, run as macOS user
    `snoop`, reached by the Conductor over a local socket. §5.
-6. **Knowledge refresher (D23).** Runs as the **Mac's owner** (launchd), not as
+6. **Knowledge refresher (D23, D34).** Runs as the **Mac's owner** inside `./snoop start`, not as
    `snoop`, so `snoop` holds no GitHub credential at all. Writes into a
    directory `snoop` can read but not write. Fetches the Agent-C clone (all
    branches) before each meeting and **every 5 minutes during one**, and writes
@@ -129,9 +132,9 @@ Snoop's code never reads Chrome's cookies or storage.
    and the §5.4 secret scan runs on the map too; a hit blocks the map, not the
    meeting.
 
-**`snoop` credentials:** in production, a dedicated Anthropic API key in its own
-Console workspace with a monthly spend limit, supplied through Claude Code's key
-helper from `snoop`'s login Keychain, never a plain file (D25). Read deny rules
+**`snoop` credentials:** none stored. In production the brain receives a dedicated
+Anthropic API key (own Console workspace, monthly spend limit) on stdin at launch,
+read from the **host's** Keychain by `./snoop start` (D35). Read deny rules
 cover `snoop`'s config and credential paths; the §5.4 secret scan is the
 backstop. Owner-side GitHub credentials: fetch-only deploy key and a
 fine-grained read-only token (pull requests: read, actions: read, metadata).
