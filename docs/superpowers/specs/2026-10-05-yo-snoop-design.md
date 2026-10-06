@@ -1,6 +1,6 @@
-# Snoop: voice standup bot for Saasless Google Meet — design
+# Snoop: voice bot for Saasless Google Meet meetings — design
 
-**Status:** draft for owner review · **Date:** 2026-10-05 · **Owner:** Brett Evans
+**Status:** approved 2026-10-05 · **Date:** 2026-10-05 · **Owner:** Brett Evans
 **Audience:** Saasless team only (Brett, Jeremy, Lindsay). Internal tool; never customer-facing.
 
 ## 1. Purpose
@@ -47,6 +47,7 @@ participant is present, and passes every negative control in §9.
 | D21 | Serena's editing tools are removed before it is added (§5.3.1). |
 | D22 | Pre-loading in v1: listen to all-team meetings, spot topics, pre-load answers' material into one per-meeting brain session. Memory only; mixed rooms pause it. §4. |
 | D23 | Keep the clone: refreshed every 5 min during meetings, plus a PR/CI status file; refresher runs as the owner so `snoop` holds no GitHub credential. §3.2. |
+| D24 | Snoop joins any Saasless meeting it is invited to, organized by any of Brett, Jeremy or Lindsay — not only standup. P1 testing may use brett@ as a read-only organizer; Attendee never signs in as brett@. |
 
 ## 3. Components
 
@@ -119,7 +120,7 @@ Lindsay. None online → Snoop says "no brain online".
   know which meetings to join).
 - Services off: Gmail, Drive, Docs, and everything else.
 - Meet in-meeting chat: Snoop never posts there (D17).
-- Invited only to meetings the team chooses.
+- Invited to any Saasless meeting the team chooses (D24); the meeting's name does not matter. Organizer may be Brett, Jeremy or Lindsay.
 
 ## 4. Conversation flow
 

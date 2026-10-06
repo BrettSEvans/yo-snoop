@@ -24,6 +24,7 @@ Plans 1 and 2 are written from Plan 0's findings, not before: every §8 claim ch
 ## Global Constraints
 
 - Internal tool for Brett, Jeremy, Lindsay only; never customer-facing (D1, §7).
+- Attendee never signs in as brett@ (or any human's account); the bot identity is agent-c@ only. brett@ may be used only as a read-only Meet organizer in P1 (D24).
 - No secret is ever printed through a tool, committed, or pasted into findings. Compare secrets by sha256 prefix only. Key files live in `spikes/.secrets/` (gitignored) and are deleted at the end of Plan 0.
 - `agent-c@startup.ai` must never send email, use Meet in-meeting chat, or post anywhere but the one Chat space (D17). No probe calls Attendee's `send_chat_message` endpoint.
 - Every gate probe has a **negative control** (a case that must fail) and a **positive control** (a case that must succeed), and both are recorded. A probe whose negative control cannot fail is not evidence.
@@ -504,7 +505,7 @@ Expected per event: a line with the right `kind`; for saasless users an `@startu
 - [ ] **Step 6: Live run B — as the bot (agent-c@), not the organizer**
 
 Same meeting; delete nothing; run `--as agentc` and sign in as agent-c@ (the bot account must be **in** the meeting — join it from a private window as agent-c@).
-Expected (record whichever happens): participants listed → the bot can be its own principal; `LIST-ERROR`/empty → organizer token required (Plan 2 then needs an owner-held refresh token with `meetings.space.readonly` only). Also record whether `email_for` resolves emails as agent-c@ (directory sharing) or errors.
+Expected (record whichever happens): participants listed → the bot can be its own principal; `LIST-ERROR`/empty → organizer token required. **Spec D24 makes this decisive:** meetings may be organized by Brett, Jeremy or Lindsay, so an organizer-only answer means Plan 2 holds a read-only `meetings.space.readonly` token for each of the three, and a meeting organized by anyone else cannot be room-checked (Snoop would treat it as mixed). Repeat Run A with Jeremy or Lindsay as organizer if they are available, to confirm the result is not specific to Brett. Also record whether `email_for` resolves emails as agent-c@ (directory sharing) or errors.
 
 - [ ] **Step 7: Verdict and commit** — P1 HOLDS if a principal Plan 2 can hold on the VM sees live participants with kind + resolvable saasless identity within the bar. Record which principal. FAILS → stop; return to spec owner.
 
