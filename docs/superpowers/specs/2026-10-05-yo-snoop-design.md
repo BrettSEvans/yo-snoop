@@ -56,6 +56,7 @@ participant is present, and passes every negative control in §9.
 | D30 | Snoop ignores captions of its own speech (labeled as the host's own seat) so it never reacts to itself. |
 | D31 | **Team roster** (2026-10-06): one file, `config/team.json` in this repo, lists every member — email, display name, host priority, `may_host`, `mixed_room_asker`. Adding a person is a roster change plus adding them to the Google Group `snoop-team@startup.ai` (Chat space membership and Chat app visibility follow the group) and running the installer on their Mac. No code names a person. |
 | D32 | **One Snoop per meeting** (2026-10-06): a Snoop that hears another seat's caption beginning "Snoop here" compares roster host priority; the lower-priority Snoop goes passive for the rest of the meeting (no speech, no Chat answers) and posts once to Chat that it stood down. Worst case both speak for about a second on the first answer. Team habit: one host per meeting. |
+| D33 | **Phasing (2026-10-06):** **Phase 1 — first working Snoop, target ~1 week**, runnable by any roster member on their own Mac: Chrome-profile seat + extension (captions, voice, card), wake / peanut-butter mute, room + asker checks, Chat delivery, D32 one-Snoop guard, sandboxed brain (clone, PR/CI file, repo map, read-only Serena; registry-mcp on Brett's Mac), answer gate, per-host installer. Spoken answers are at most 3 sentences, with anything longer posted in full to Chat. **Phase 2:** pre-loading (D22) and the 75-second pacing check-ins (D18 steps 2–3). |
 
 ## 3. Components
 

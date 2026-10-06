@@ -21,6 +21,8 @@
 | 2 | Meeting seat: production extension (captions, voice, card), Conductor on Pipecat (wake/stop/mute, room + asker checks, pacing, pre-loading, D32 stand-down), Chat poster, roster-driven config | after Plan 0 findings |
 | 3 | Per-host install runbook (any roster member) + end-to-end rehearsal (spec §9), Brett first | after Plans 1–2 |
 
+Plans 1–3 target **Phase 1** (spec D33): first working Snoop on any roster member's Mac, ~1 week. Pre-loading and 75-second pacing are Phase 2.
+
 ## Global Constraints
 
 - Internal tool for roster members only (`config/team.json`); never customer-facing (D1, §7).
