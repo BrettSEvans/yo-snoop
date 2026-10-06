@@ -1,0 +1,19 @@
+import pytest
+from spikes.p2_wake import is_wake, is_stop
+
+@pytest.mark.parametrize("t", ["Yo Snoop, how many PRs merged?", "yo snoop what's CI",
+                               "You Snoop, status?", "Yo, Snoopy, any blockers?", "  yo snoop"])
+def test_wake_hits(t):
+    assert is_wake(t)
+
+@pytest.mark.parametrize("t", ["we should snoop around the logs", "yo can you snoop that",
+                               "Snoop Dogg is great", "I said yo snoop earlier", "snoop"])
+def test_wake_decoys(t):
+    assert not is_wake(t)
+
+@pytest.mark.parametrize("t", ["peanut butter", "Peanut butter!", "ok peanut butter please"])
+def test_stop_anywhere(t):
+    assert is_stop(t)
+
+def test_stop_not_partial():
+    assert not is_stop("peanut")

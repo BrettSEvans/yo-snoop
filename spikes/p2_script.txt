@@ -1,0 +1,30 @@
+Yo Snoop, how many PRs merged yesterday?
+we should snoop around the logs later
+Yo Snoop, is CI green on main?
+Snoop Dogg had a new album out
+You Snoop, what's blocking the v2 epic?
+yo can you snoop that branch
+Yo Snoop, how many v1 to v2 gaps are missing?
+I said yo snoop earlier but never mind
+Yo, Snoopy, where is multi-model support?
+let's not snoop on Jeremy's branch
+Yo Snoop, what did the last run cost?
+snoop
+Yo Snoop, who opened the newest PR?
+the snoop thing is cool
+Yo Snoop, which stage is Foodious at?
+we could snoop the dashboard
+Yo Snoop, any open blockers?
+snooping is not a feature
+Yo Snoop, summarize today's merges.
+don't snoop
+Yo Snoop, how does the accessibility review run in v2?
+Yo Snoop, what changed in registry-mcp this week?
+Yo Snoop, is the AC-v2 branch ahead of main?
+Yo Snoop, how many backlog items moved yesterday?
+Yo Snoop, what's the newest commit on main?
+Yo Snoop, list open PRs.
+Yo Snoop, did the verify recipe pass?
+Yo Snoop, what's AGNTC-1252 about?
+Yo Snoop, what is D17 in the spec?
+Yo Snoop, peanut butter.
