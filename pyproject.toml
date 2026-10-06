@@ -1,0 +1,15 @@
+[project]
+name = "yo-snoop-spikes"
+version = "0.0.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "google-api-python-client>=2.150",
+  "google-auth-oauthlib>=1.2",
+  "google-cloud-texttospeech>=2.20",
+  "aiohttp>=3.10",
+  "websockets>=13",
+  "claude-agent-sdk",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
