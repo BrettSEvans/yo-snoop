@@ -5,11 +5,14 @@ Spec: docs/superpowers/specs/2026-10-05-yo-snoop-design.md · Plan: docs/superpo
 | Probe | Spec ref | Verdict | Evidence below | Consequence for Plans 1–2 |
 |---|---|---|---|---|
 | P1 Meet participants principal + latency | §8.1, §4 step 4 | | | |
-| P2 Caption latency + wake accuracy | §8.2, §4 step 3 | | | |
-| P3 Claude Code headless controls | §8.3, §5.3 | **PARTIAL** — Steps 1–5 HOLD; Step 6 (key helper) pending owner's key | §P3 | Plan 1 uses the flags below; `--max-turns` is SDK-only |
-| P4 Attendee SAML, OU-scoped | §8.4, §3.3 | | | |
-| P5 Chat app, one space, three users | §8.5, §3.1 | | | |
-| P6 Audio stop latency (unlisted risk) | §4 step 2 | | | |
+| P2 Caption reading in the extension + wake accuracy | §8.2, §4 step 3 | | | |
+| P3 Claude Code headless controls | §8.3, §5.3 | **PARTIAL** — Steps 1–5 HOLD; Step 6 (key helper) deferred to Plan 1 (D25) | §P3 | Plan 1 uses the SDK with `setting_sources=[]`, `strict_mcp_config`, `dontAsk`; `--max-turns` is SDK-only |
+| P4 Voice + card via extension (BlackHole fallback) | §8.4, D28, D29 | | | |
+| P5 Chat app, team group, one space | §8.5, §3.3 | | | |
+| P6 Own-voice label | §8.6, D30 | | | |
+| P7 Two-Snoop detection | §8.7, D32 | | | |
+
+Obsolete after the 2026-10-06 revision (D26): old P4 "Attendee SAML, OU-scoped" and old P6 "Attendee audio stop latency" — never run.
 
 Verdicts: HOLDS / FAILS / PARTIAL. Every verdict cites pasted command output. No secrets.
 
