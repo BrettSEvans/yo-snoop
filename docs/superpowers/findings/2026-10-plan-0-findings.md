@@ -67,3 +67,13 @@ hooks, LSP, plugin sync, auto-memory, keychain reads and CLAUDE.md auto-discover
 Consequences: Plan 1 should run the brain in bare mode (or the SDK equivalent) for isolation; and the
 production brain cannot run on a personal claude.ai subscription login in that mode — it needs an API key.
 Plan 0 testing on the owner's own login is unaffected.
+
+**P3 addendum 2 — subscription vs API key (2026-10-05, owner question).** Anthropic's support article
+"Use the Claude Agent SDK with your Claude plan": Agent SDK and `claude -p` use is available on Pro, Max,
+Team and Enterprise for "your own projects"; credits "can't be shared or pooled across teammates";
+and "Teams running shared production automation should use Claude Platform with an API key."
+The announced separate monthly SDK credit is **paused** — SDK and `claude -p` usage currently draw from the
+plan's normal usage limits (shared with the owner's own Claude Code and chat use).
+Decision D25: Plans 0–2 development may use the owner's subscription; team-facing Snoop uses an API key.
+Task 3 Step 6 (apiKeyHelper) is therefore deferred to Plan 1's production config, not needed for Plan 0's verdicts.
+Source: https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan

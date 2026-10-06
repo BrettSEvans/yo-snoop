@@ -48,6 +48,7 @@ participant is present, and passes every negative control in §9.
 | D22 | Pre-loading in v1: listen to all-team meetings, spot topics, pre-load answers' material into one per-meeting brain session. Memory only; mixed rooms pause it. §4. |
 | D23 | Keep the clone: refreshed every 5 min during meetings, plus a PR/CI status file; refresher runs as the owner so `snoop` holds no GitHub credential. §3.2. |
 | D24 | Snoop joins any Saasless meeting it is invited to, organized by any of Brett, Jeremy or Lindsay — not only standup. P1 testing may use brett@ as a read-only organizer; Attendee never signs in as brett@. |
+| D25 | Development and testing (Plans 0–2) may run on the owner's own Claude subscription (Max/Team), as the owner, on the owner's Mac. The team-facing Snoop runs on an API key (§3.2), per Anthropic's guidance that shared production automation uses an API key; a subscription credential is never placed where the `snoop` user can read it. |
 
 ## 3. Components
 
