@@ -9,3 +9,5 @@ token*.json
 __pycache__/
 .venv/
 *.wav
+spikes/extension/config.local.json
+spikes/extension/node_modules/
