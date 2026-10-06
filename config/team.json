@@ -1,0 +1,9 @@
+{
+  "domain": "startup.ai",
+  "google_group": "snoop-team@startup.ai",
+  "members": [
+    {"email": "brett@startup.ai",   "display_name": "Brett Evans",   "host_priority": 1, "may_host": true, "mixed_room_asker": true},
+    {"email": "jeremy@startup.ai",  "display_name": "Jeremy Leeds",  "host_priority": 2, "may_host": true, "mixed_room_asker": true},
+    {"email": "lindsay@startup.ai", "display_name": "Lindsay Palmer", "host_priority": 3, "may_host": true, "mixed_room_asker": true}
+  ]
+}

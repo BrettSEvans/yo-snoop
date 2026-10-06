@@ -1,7 +1,7 @@
 # Snoop: voice bot for Saasless Google Meet meetings — design
 
-**Status:** approved 2026-10-05; **revised 2026-10-06** (Chrome-profile approach, D26–D30) · **Owner:** Brett Evans
-**Audience:** Saasless team only (Brett, Jeremy, Lindsay). Internal tool; never customer-facing.
+**Status:** approved 2026-10-05; **revised 2026-10-06** (Chrome-profile approach D26–D30; any-host roster D31–D32) · **Owner:** Brett Evans
+**Audience:** Saasless team only — the members listed in the team roster (D31), today Brett, Jeremy, Lindsay. Internal tool; never customer-facing.
 
 ## 1. Purpose
 
@@ -11,7 +11,7 @@ how many v1→v2 gaps remain, what a run costs, where a branch stands. Today tho
 answers wait until after the meeting (the 2026-10-05 standup notes record Brett
 unsure of v2's atomic-workflow mechanics mid-meeting).
 
-Snoop takes Brett's seat in Saasless Google Meet calls, answers spoken questions
+Snoop takes a team member's seat (the **host**) in Saasless Google Meet calls, answers spoken questions
 about the Agent-C repo when addressed with "Yo Snoop", and speaks or posts the
 answer — without putting repo content on an internet-facing machine or in front
 of anyone outside Saasless.
@@ -25,42 +25,44 @@ participant is present, and passes every negative control in §9.
 | # | Decision |
 |---|---|
 | D1 | IP-safe first. Security constraints win over convenience. |
-| D2 | Participants: Brett, Jeremy, Lindsay, all on `saasless.ai`. |
+| D2 | Team: the members in the roster (D31), all on `saasless.ai`; today Brett, Jeremy, Lindsay. |
 | D3 | ~~Hybrid cloud VM + Mac brain.~~ **Superseded by D26** (2026-10-06): everything runs on the host's Mac; no VM. |
 | D4 | Any participant whose account is not `saasless.ai` (gmail, other company, anonymous, dial-in) makes the room **mixed**. |
-| D5 | Mixed room: only brett@, jeremy@, lindsay@startup.ai may ask; answers go to Google Chat, never spoken. |
+| D5 | Mixed room: only roster members marked `mixed_room_asker` (today brett@, jeremy@, lindsay@) may ask; answers go to Google Chat, never spoken. |
 | D6 | "Peanut butter" from anyone mutes speech until "Yo Snoop" is said again. It does not cancel research or Chat posts. |
 | D7 | Wake phrase is "Yo Snoop". |
 | D8 | Speech in: Meet's own live captions, read from the Meet page by the Snoop extension (D27). Speech out: Google Cloud TTS. Fallback for input: self-hosted Whisper. Deepgram/ElevenLabs rejected: new vendors hearing all audio. |
-| D9 | One fixed Google Chat space with the three team members; answers @-mention the asker. |
+| D9 | One fixed Google Chat space whose members are the roster's Google Group; answers @-mention the asker. |
 | D10 | ~~Dedicated `agent-c@startup.ai` account.~~ **Superseded by D26** (2026-10-06): no bot account; Snoop sits in the host's own seat. |
 | D11 | Voice character: the `snoop` output style (`~/.claude/output-styles/snoop.md`), curse words off. Stock Google voice — no imitation of Snoop Dogg's real voice. |
 | D12 | "Ask the repo anything": the brain reads the full repo (code, docs, all branches), not a curated snapshot. |
-| D13 | Any of Brett, Jeremy or Lindsay may eventually host Snoop on their own Mac and account. **v1: Brett's Mac only.** Hosting from Jeremy's or Lindsay's Mac is v2, and needs a one-Snoop-per-meeting rule first (§7). |
+| D13 | **v1 supports any roster member as host**, on their own Mac, Google account and Snoop API key; the card names the host ("Snoop (Jeremy Leeds)"). Rollout order: Brett's Mac passes rehearsal first, then Jeremy's and Lindsay's installs. Two Snoops in one meeting are resolved by D32. |
 | D14 | Code lives in a separate private repo, `brett-saasless/yo-snoop`, never in Agent-C (Agent-C's customer export ships all of `scripts/`). |
-| D15 | v1 brain on Brett's Mac uses registry-mcp read tools. **v2 requirement:** registry-mcp works on Jeremy's and Lindsay's Macs. |
+| D15 | v1: only Brett's Mac has the live registry, so only a Brett-hosted Snoop uses registry-mcp read tools; on other hosts Snoop says "that's on Brett's machine". **v2 requirement:** registry-mcp works on every host's Mac. |
 | D16 | Owner's macOS home is set to `700` by the installer. |
-| D17 | Snoop communicates only by speaking in a meeting when allowed and by Chat to Brett, Jeremy and Lindsay. The extension never sends Meet chat, email, or anything else from the host's account. |
+| D17 | Snoop communicates only by speaking in a meeting when allowed and by Chat to the team space. The extension never sends Meet chat, email, or anything else from the host's account. |
 | D18 | Spoken answers: 3 sentences, then ask the room if they want more and on what; continue in ~75 s chunks that end on a complete thought, asking again after each. |
 | D19 | v2 direction: Snoop's own MCP server reading a Google Drive folder for the meeting (code or document sets), not only the Agent-C repo. Out of v1. §7.1. |
 | D20 | v1 uses Pipecat (Conductor pipeline), repomix (repo map) and Serena (code navigation). Each one's speed is re-measured in rehearsal before it is relied on. |
 | D21 | Serena's editing tools are removed before it is added (§5.3.1). |
 | D22 | Pre-loading in v1: listen to all-team meetings, spot topics, pre-load answers' material into one per-meeting brain session. Memory only; mixed rooms pause it. §4. |
 | D23 | Keep the clone: refreshed every 5 min during meetings, plus a PR/CI status file; refresher runs as the owner so `snoop` holds no GitHub credential. §3.2. |
-| D24 | Snoop joins any Saasless meeting the host is invited to, organized by any of Brett, Jeremy or Lindsay — not only standup. |
+| D24 | Snoop joins any Saasless meeting the host is invited to, organized by any roster member — not only standup. |
 | D25 | Development and testing (Plans 0–2) may run on the owner's own Claude subscription (Max/Team), as the owner, on the owner's Mac. The team-facing Snoop runs on an API key (§3.2), per Anthropic's guidance that shared production automation uses an API key; a subscription credential is never placed where the `snoop` user can read it. |
 | D26 | **Chrome-profile approach (2026-10-06):** Snoop takes the host's own seat. The host signs in to Google themselves in a dedicated Chrome profile used only for Snoop; Snoop never handles the host's password and never signs in as them. No VM, no Attendee, no extra Google account. Rejected alternative: SAML sign-in of a bot as brett@ (would let a signing key sign in as Brett everywhere). |
 | D27 | A Snoop Chrome extension, loaded unpacked only in that profile, reads Meet's captions and speaker names, supplies Snoop's voice, and shows the video card. Host permission `https://meet.google.com/*` only. |
-| D28 | Disclosure: Snoop's camera tile is a card reading **"Snoop (Brett Evans)"**, and every spoken answer starts with **"Snoop here"**. The spoken label is mandatory even if the card fails. The Google account name is never changed. |
+| D28 | Disclosure: Snoop's camera tile is a card reading **"Snoop (<host display name>)"** — e.g. "Snoop (Brett Evans)", "Snoop (Jeremy Leeds)" — from the roster, and every spoken answer starts with **"Snoop here"**. The spoken label is mandatory even if the card fails. The Google account name is never changed. |
 | D29 | Snoop's voice reaches Meet through the extension (supplying the tab's microphone); fallback is the BlackHole virtual audio device. Chosen by Plan 0 probe. |
 | D30 | Snoop ignores captions of its own speech (labeled as the host's own seat) so it never reacts to itself. |
+| D31 | **Team roster** (2026-10-06): one file, `config/team.json` in this repo, lists every member — email, display name, host priority, `may_host`, `mixed_room_asker`. Adding a person is a roster change plus adding them to the Google Group `snoop-team@startup.ai` (Chat space membership and Chat app visibility follow the group) and running the installer on their Mac. No code names a person. |
+| D32 | **One Snoop per meeting** (2026-10-06): a Snoop that hears another seat's caption beginning "Snoop here" compares roster host priority; the lower-priority Snoop goes passive for the rest of the meeting (no speech, no Chat answers) and posts once to Chat that it stood down. Worst case both speak for about a second on the first answer. Team habit: one host per meeting. |
 
 ## 3. Components
 
 ```
-                      Brett's Mac (host)
+                       Host's Mac
  ┌───────────────────────────────────────────────────────────────────────┐
- │  Chrome profile "Snoop" (signed in as brett@ by Brett)                │
+ │  Chrome profile "Snoop" (host signs in as themselves)                 │
  │   Meet tab ◀── Snoop extension: captions out · voice + card in        │
  │                      │  ▲  localhost websocket (127.0.0.1, token)     │
  │                      ▼  │                                             │
@@ -85,7 +87,7 @@ participant is present, and passes every negative control in §9.
      the Conductor over a localhost websocket (`127.0.0.1` only, per-install
      token).
    - Supplies Snoop's voice as the tab's microphone (D29) and the
-     "Snoop (Brett Evans)" card as the tab's camera (D28), by providing those
+     "Snoop (<host display name>)" card from the roster as the tab's camera (D28), by providing those
      media streams to the Meet page. If the probe shows voice injection is
      unreliable, voice goes through BlackHole instead (Chrome mic set to
      BlackHole in that profile).
@@ -139,8 +141,12 @@ fine-grained read-only token (pull requests: read, actions: read, metadata).
   API, People API, Cloud Text-to-Speech API; OAuth consent **Internal**; one
   Desktop OAuth client for the host's read-only Meet token; service accounts for
   Chat and TTS.
-- **Chat app** visible to brett@, jeremy@, lindsay@ only; member of the one
-  `Snoop` space.
+- **Google Group `snoop-team@startup.ai`** (free) holds the roster's members.
+- **Chat app** visible to that group only; the one `Snoop` space's members are
+  that group. Adding a person to the group grants both.
+- **Per-host keys:** each host's Mac gets its own Chat and TTS service-account
+  keys and its own Snoop API key (one shared Console workspace, one spend cap),
+  each revocable on its own.
 - **Host account:** unchanged. Its display name is never changed (D28).
 
 ## 4. Conversation flow
@@ -160,7 +166,7 @@ fine-grained read-only token (pull requests: read, actions: read, metadata).
    **API error or timeout → mixed** (fail closed).
 5. **Asker check.** Speaker display name must match exactly one verified
    `saasless.ai` participant. Duplicate names, or a name matching a non-team
-   record → ignored. Mixed room: asker must also be brett@, jeremy@ or lindsay@.
+   record → ignored. Mixed room: asker must also be a roster `mixed_room_asker`.
    (If the real host also joins from another device, that seat is the same
    account and counts as team.)
 6. **Ask the brain.** Question + room verdict go to the brain on the same Mac.
@@ -215,9 +221,9 @@ so answers start warm.
 6. **Prepares, never speaks:** speech still needs "Yo Snoop". "Peanut butter"
    mutes speech but does not stop pre-loading.
 7. **Out of v1:** pre-drafting answers to guessed questions.
-8. **Team notice:** Jeremy and Lindsay are told, before first use, that Snoop
+8. **Team notice:** every roster member is told, before first use, that Snoop
    hears the whole all-team meeting, not only wake-phrase questions, and that
-   it sits in Brett's seat.
+   it sits in the host's seat.
 
 Pre-loading counts against the same monthly spend limit; its cost per meeting
 hour is measured in rehearsal.
@@ -336,8 +342,6 @@ transcript text. No meeting transcript storage anywhere.
 - Customer-facing use of any kind (owner decision).
 - Writes by voice: no tickets, approvals, or code changes.
 - Unprompted interjection.
-- Hosting from Jeremy's or Lindsay's Mac (v2, D13). Needs a one-Snoop-per-meeting
-  rule so two hosts never both answer.
 - registry-mcp on Jeremy's and Lindsay's Macs (v2, D15).
 - Imitating Snoop Dogg's real voice.
 - Zoom, Teams, or meetings the host is not invited to.
@@ -384,6 +388,8 @@ Not designed yet; recorded so v1 does not block it.
 5. Google Chat app restricted to one space and three users.
 6. Own-voice exclusion (D30): how Meet labels the host's own captions, so
    Snoop never reacts to itself.
+7. Two-Snoop detection (D32): another seat's "Snoop here" appears in captions
+   with that seat's name, fast enough for the stand-down rule.
 
 Verified 2026-10-05: Meet Media API is receive-only (Google docs); registry-mcp
 has no read-only mode and honors `AGENT_C_HOME`; Serena has `read_only` and
@@ -404,7 +410,9 @@ Vexa (Apache-2.0 Meet bot, but its speak endpoint returned 404 in v0.12).
 muted → wake re-arm; own-seat caption lines dropped (D30); room classifier
 (all-team, anonymous, dial-in, gmail, other-domain, API error → mixed); asker
 matcher (duplicates, renamed outsider); "Snoop here" prefix on every spoken
-answer; Chat poster refuses any non-configured space.
+answer; Chat poster refuses any non-configured space; roster loader rejects a
+member outside `saasless.ai` and a duplicate email; the card text comes from the
+host's roster entry; D32 stand-down picks the lower-priority host and posts once.
 
 **Extension:** manifest grants only `https://meet.google.com/*` and the
 localhost websocket (asserted by a test reading `manifest.json`); the localhost
@@ -427,13 +435,16 @@ participant-check failure also pauses it; a planted phrase spoken in a
 rehearsal is absent from every file and log on the Mac afterwards.
 
 **End-to-end rehearsal** (test Meet; Snoop in Brett's seat on Brett's Mac;
-Jeremy or Lindsay plus one more account):
+Jeremy or Lindsay plus one more account; then repeated with Jeremy or Lindsay
+as host on their own Mac):
 - Acceptance questions from the 2026-10-05 standup, graded by Brett:
   - How many v1→v2 gaps are there, and how many are missing?
   - How does an accessibility-review workflow run in v2?
   - Where does multi-model support (Cursor, Gemini, OpenAI) stand?
   - What does a v2 run cost compared with Beast Mode?
-- The tile shows "Snoop (Brett Evans)"; every answer starts "Snoop here".
+- The tile shows "Snoop (<host>)"; every answer starts "Snoop here".
+- Two hosts start Snoop in the same meeting: the lower-priority one stands down
+  and posts once to Chat; only one Snoop answers after the first answer.
 - A non-`saasless.ai` participant of each kind (gmail, other domain, anonymous,
   dial-in) joins mid-answer: speech stops; the remainder posts to Chat.
 - Any participant says "peanut butter": Snoop stays silent until "Yo Snoop";
