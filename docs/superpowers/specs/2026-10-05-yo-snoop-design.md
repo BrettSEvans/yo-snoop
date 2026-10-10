@@ -37,7 +37,7 @@ participant is present, and passes every negative control in §9.
 | D11 | Voice character: the `snoop` output style (`~/.claude/output-styles/snoop.md`), curse words off. Stock Google voice — no imitation of Snoop Dogg's real voice. |
 | D12 | "Ask the repo anything": the brain reads the full repo (code, docs, all branches), not a curated snapshot. |
 | D13 | **v1 supports any roster member as host**, on their own Mac, Google account and Snoop API key; the card names the host ("Snoop (Jeremy Leeds)"). Rollout order: Brett's Mac passes rehearsal first, then Jeremy's and Lindsay's installs. Two Snoops in one meeting are resolved by D32. |
-| D14 | Code lives in a separate private repo, `brett-saasless/yo-snoop`, never in Agent-C (Agent-C's customer export ships all of `scripts/`). |
+| D14 | Code lives in a separate private repo, `brett-saasless/yo-snoop`, never in Agent-C (Agent-C's customer export ships `scripts/` compiled, minus 12 named exclusions, so any new file there ships by default — corrected 2026-10-09 per the review). |
 | D15 | v1: only Brett's Mac has the live registry, so only a Brett-hosted Snoop uses registry-mcp read tools; on other hosts Snoop says "that's on Brett's machine". **v2 requirement:** registry-mcp works on every host's Mac. |
 | D16 | Owner's macOS home is set to `700` by the installer. |
 | D17 | Snoop communicates only by speaking in a meeting when allowed and by Chat to the team space. The extension never sends Meet chat, email, or anything else from the host's account. |
