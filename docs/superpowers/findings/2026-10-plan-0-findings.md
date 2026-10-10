@@ -80,3 +80,13 @@ plan's normal usage limits (shared with the owner's own Claude Code and chat use
 Decision D25: Plans 0–2 development may use the owner's subscription; team-facing Snoop uses an API key.
 Task 3 Step 6 (apiKeyHelper) is therefore deferred to Plan 1's production config, not needed for Plan 0's verdicts.
 Source: https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan
+
+
+## Corrections after the adversarial review (2026-10-09)
+
+Report: `docs/product/critic-reports/2026-10-09-session-aec42f1e-orchestrator-contract.md`.
+
+- **`--max-turns` exists.** It is hidden from `claude --help`, but `claude -p hi --max-turns 0` runs and the SDK passes it to the CLI. The earlier "ABSENT / SDK-only" line is wrong.
+- **P3 proved less than recorded.** Only the write check was shown able to fail. The network and shell checks were never shown able to detect anything, `claude -p` errors were ignored, and the probe ran a different configuration (`--setting-sources project` + `--settings`, CLI 2.1.283) from production (`setting_sources=[]`, bundled CLI 2.1.286). P3's verdict is downgraded to **INCONCLUSIVE except the write check**; Plan 1 Task 9 re-runs every control through the SDK as `snoop`, asserting permission-denial events and no errors.
+- **Subscription and credits:** see spec D25 (rewritten): Max and Team plans include monthly API credits from 2026-10-07.
+- **Serena pin:** the #1938 fix is unreleased on PyPI (1.7.0 predates it); Plan 1 pins a git commit.
