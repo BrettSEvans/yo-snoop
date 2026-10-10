@@ -1,6 +1,8 @@
-# Snoop Plan 3 — Install Runbook and Rehearsal Implementation Plan
+# Snoop Plan 5 — Meet Install and Rehearsal Implementation Plan (Phase 1b)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+> **Revised 2026-10-09:** Phase 1b. The base runbook and Desk Snoop rehearsal are Plan 3; this plan adds only the Meet pieces (Google setup, Chrome profile, extension, Chat) and the Meet rehearsal. Before Task 3's rehearsal, add row R16: *Host is not the organizer* → room behaves per Plan 0 P1 Run B (and never "team" on an empty list, D41).
 
 **Goal:** Any roster member can install Snoop on their own Mac from a written runbook, and Phase 1 passes the spec §9 rehearsal — Brett first, then Jeremy and Lindsay.
 
@@ -8,7 +10,7 @@
 
 **Tech Stack:** The `./snoop` CLI (Plans 1–2), Chrome, Google Meet, Google Chat, the Anthropic Console.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` §9 and D13, D26–D36. Plans 1 and 2 must be complete.
+**Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` §9 and D13, D26–D36. Plans 1–4 must be complete.
 
 ## Global Constraints
 

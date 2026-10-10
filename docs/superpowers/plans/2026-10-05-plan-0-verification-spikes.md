@@ -4,6 +4,8 @@
 
 > **Revised 2026-10-06** for the Chrome-profile approach (spec D26–D32). Tasks 1, 3, 4 are unchanged in substance (Task 4's Run B now tests Brett as a non-organizer). Attendee, the `agent-c@` account and SAML (old Tasks 2, 5, 7) are gone. New: Task 5 (extension skeleton, bridge, roster), Task 6 (caption reading), Task 7 (voice + card), Task 9 (own voice + two Snoops), Task 10 (close-out).
 
+> **Revised 2026-10-09 (desk first):** Tasks 2 and 4–10 are the **Meet probes for Phase 1b** — run them after Desk Snoop (Plans 1–3) works. Task 3 (P3) is superseded by Plan 1 Task 7 Step 1 and Task 9, which re-run the sandbox controls through the SDK as `snoop` (see findings corrections).
+
 **Goal:** Prove or disprove the spec's unverified claims (§8) before any product code is written.
 
 **Architecture:** Each probe is small throwaway code under `spikes/` (Python) and `spikes/extension/` (a Manifest V3 Chrome extension) plus a manual procedure, producing a verdict (HOLDS / FAILS / PARTIAL) with pasted evidence in one findings file. Google admin actions and live meetings are done by the owner (Brett), with Jeremy or Lindsay for multi-person steps. A FAILS on P1 Run A, P2 caption reading, or P4 media (both extension and BlackHole) stops the program and returns to the spec.
@@ -12,16 +14,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` (D1–D32). Read §3, §4, §5 and §8 before starting.
 
-## Roadmap (this plan is 1 of 4)
+## Roadmap (revised 2026-10-09: desk first)
 
-| Plan | Scope | Written when |
+| Plan | Scope | Phase |
 |---|---|---|
-| **0 (this)** | Verify §8 claims | now |
-| 1 | Brain: installer, `snoop` user + negative controls, owner refresher (clone, PR/CI file, repo map, `AGENT_C_HOME` bundle), SDK sandbox config, Serena lockdown, registry-mcp, answer gate, local brain socket | after Plan 0 findings |
-| 2 | Meeting seat: production extension (captions, voice, card), Conductor on Pipecat (wake/stop/mute, room + asker checks, pacing, pre-loading, D32 stand-down), Chat poster, roster-driven config | after Plan 0 findings |
-| 3 | Per-host install runbook (any roster member) + end-to-end rehearsal (spec §9), Brett first | after Plans 1–2 |
-
-Plans 1–3 target **Phase 1** (spec D33): first working Snoop on any roster member's Mac, ~1 week. Pre-loading and 75-second pacing are Phase 2.
+| 1 | Brain (sandboxed, read-only) | 1a |
+| 2 | Desk Snoop (mic → Whisper → brain → `say`) | 1a |
+| 3 | Desk install runbook + desk rehearsal | 1a |
+| **0 (this)** | Meet probes (P1, P2, P4–P7) | 1b |
+| 4 | Meet seat (extension, Conductor, Chat) | 1b |
+| 5 | Meet install + rehearsal | 1b |
 
 ## Global Constraints
 

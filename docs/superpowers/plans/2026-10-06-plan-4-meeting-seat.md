@@ -1,6 +1,52 @@
-# Snoop Plan 2 — The Meeting Seat Implementation Plan
+# Snoop Plan 4 — The Meeting Seat Implementation Plan (Phase 1b)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+> **Revised 2026-10-09 (desk first, adversarial review).** This is **Phase 1b** (spec D33): start only after Plans 1–3 (Desk Snoop) are done **and** Plan 0's Meet probes (P1, P2, P4–P7) report GO. Changes from the 2026-10-06 version:
+> - **Reuse, don't rebuild:** `yosnoop/brain_client.py`, `yosnoop/speech.py` (`shape` → `Shaped(spoken, full)`), `yosnoop/qlog.py` and `yosnoop/wake.py` come from Plan 2. Task 4 below is superseded by Plan 2 Task 4; in Task 5, keep only `chat.py` and `voice.py`; in Task 6, post `shaped.full` to Chat when `len(sentences(g.text)) > 3`; in Task 7, `qlog` already exists.
+> - **D41 — the room check fails closed on an empty list** (review defect 1, high). Task 3 adds, before Step 2, this failing test, and `verdict()` and `GoogleMeet._fetch` change as shown:
+>
+> ```python
+> # tests/test_room.py (add)
+> def test_empty_or_self_only_room_is_mixed():
+>     assert verdict([], R, own_user_id="users/1") == "mixed"
+>     assert verdict([B], R, own_user_id="users/1") == "mixed"
+> ```
+>
+> ```python
+> # yosnoop/room.py — verdict
+> def verdict(participants, roster, own_user_id: str) -> str:
+>     others = [p for p in participants if p.user_id != own_user_id]
+>     if not others:
+>         return "mixed"
+>     return "team" if all(_is_team(p, roster) for p in others) else "mixed"
+> ```
+>
+> ```python
+> # yosnoop/google_meet.py — paginate both lists; no active record → raise (RoomWatcher turns it into "mixed")
+> def _all(collection, key, **kw):
+>     req, out = collection.list(**kw), []
+>     while req is not None:
+>         resp = req.execute()
+>         out += resp.get(key, [])
+>         req = collection.list_next(req, resp)
+>     return out
+>
+> def _fetch(self, code: str):
+>     recs = _all(self.meet.conferenceRecords(), "conferenceRecords",
+>                 filter=f'space.meeting_code = "{code}" AND end_time IS NULL')
+>     if not recs:
+>         raise LookupError("no active conference")
+>     out = []
+>     for rec in recs:
+>         ps = _all(self.meet.conferenceRecords().participants(), "participants", parent=rec["name"])
+>         out += [classify(p) for p in ps if not p.get("latestEndTime")]
+>     return out
+> ```
+>
+> Add a test with a fake service returning two pages and one returning zero records (→ `RoomWatcher.current()` is `("mixed", [])`).
+> - **Emails:** `resolve_email` accepts only an address whose People API source is the domain profile (`metadata.source.type == "DOMAIN_PROFILE"`); anything else → `None` (not team). Add a test with a non-domain source.
+> - **`--dev` refuses a live Meet room** (D39): `./snoop start --dev` exits with an explanation if a `meeting` message arrives.
 
 **Goal:** `./snoop start` puts Snoop in the host's Meet seat: it hears "Yo Snoop" questions through the extension, checks the room, asks the brain (Plan 1), and answers by voice (team room) or Chat (mixed room) — Phase 1 scope (spec D33).
 
@@ -8,7 +54,7 @@
 
 **Tech Stack:** Python 3.12 (`aiohttp`, `google-api-python-client`, `google-auth-oauthlib`, `google-cloud-texttospeech`; `sounddevice` only if Plan 0 chose BlackHole), Chrome MV3 extension, Node `node --test` + `jsdom` for extension tests.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` — D4–D9, D11, D13, D17, D24, D26–D33, D36; §3.1, §4, §5.4, §6. Plan 1 (brain) must be complete.
+**Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` — D4–D9, D11, D13, D17, D24, D26–D33, D36; §3.1, §4, §5.4, §6. Plans 1–3 must be complete; Plan 0 Meet probes must be GO.
 
 ## Inputs from Plan 0 findings (read before Task 1; each has a default)
 
