@@ -1066,6 +1066,7 @@ dependencies = [
     { name = "google-api-python-client" },
     { name = "google-auth-oauthlib" },
     { name = "google-cloud-texttospeech" },
+    { name = "mcp" },
     { name = "websockets" },
 ]
 
@@ -1077,10 +1078,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.10" },
-    { name = "claude-agent-sdk" },
+    { name = "claude-agent-sdk", specifier = "==0.2.163" },
     { name = "google-api-python-client", specifier = ">=2.150" },
     { name = "google-auth-oauthlib", specifier = ">=1.2" },
     { name = "google-cloud-texttospeech", specifier = ">=2.20" },
+    { name = "mcp", specifier = ">=2.3.0" },
     { name = "websockets", specifier = ">=13" },
 ]
 
