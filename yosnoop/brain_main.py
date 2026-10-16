@@ -69,9 +69,63 @@ async def serve():
     if client:
         await client.__aexit__(None, None, None)
 
+async def control():
+    """One doctor turn through the production options. Reports text, error, denials and the init tool list."""
+    from claude_agent_sdk import ClaudeSDKClient, ResultMessage, SystemMessage
+    from yosnoop.brain_opts import build_options, KEY_STRIP
+    from yosnoop import paths
+    k = paths.knowledge_dir()
+    cfg = json.loads((k / "brain-config.json").read_text()) if (k / "brain-config.json").exists() else {}
+    cred = json.loads(sys.stdin.readline())
+    req = json.loads(sys.stdin.readline())
+    key = cred.get("value") if cred.get("type") == "key" else None
+    opts = build_options(k, cfg.get("registry_cmd"), cfg.get("serena_cmd"), cfg.get("model", "claude-sonnet-5-5"),
+                         cfg.get("persona", ""), api_key=key)
+    if req.get("envprobe"):  # C5 only: wrapped like production, or unwrapped as the negative control
+        probe = [sys.executable, "-m", "yosnoop.envprobe_server"]
+        cmd = [*KEY_STRIP, *probe] if req["envprobe"] == "wrapped" else probe
+        opts.mcp_servers = {**opts.mcp_servers, "envprobe": {"type": "stdio", "command": cmd[0], "args": cmd[1:]}}
+        opts.allowed_tools = [*opts.allowed_tools, "mcp__envprobe__env_probe"]
+    res = {"type": "control_result", "text": "", "error": None, "denials": 0, "tools_seen": []}
+    try:
+        async with ClaudeSDKClient(options=opts) as c:
+            await c.query(req["prompt"])
+            async def collect():
+                async for m in c.receive_response():
+                    if isinstance(m, SystemMessage) and m.subtype == "init":
+                        res["tools_seen"] = sorted(m.data.get("tools", []))
+                    if isinstance(m, ResultMessage):
+                        res["text"] = m.result or ""
+                        res["denials"] = len(m.permission_denials or [])
+                        if m.is_error:
+                            res["error"] = m.subtype or "result-error"
+            await asyncio.wait_for(collect(), timeout=150)
+    except Exception as e:
+        res["error"] = "timeout" if isinstance(e, asyncio.TimeoutError) else type(e).__name__
+    out(res)
+
+def serena_tools():
+    from yosnoop.brain_opts import KEY_STRIP
+    from yosnoop.serena_cfg import list_tools, assert_tools
+    from yosnoop import paths
+    k = paths.knowledge_dir()
+    cfg = json.loads((k / "brain-config.json").read_text()) if (k / "brain-config.json").exists() else {}
+    if not cfg.get("serena_cmd"):
+        out({"error": "no serena_cmd in brain-config.json"}); return
+    try:
+        tools = asyncio.run(list_tools([*KEY_STRIP, *cfg["serena_cmd"]]))
+        assert_tools(tools)
+        out({"tools": sorted(tools), "error": None})
+    except Exception as e:
+        out({"error": f"{type(e).__name__}: {e}"[:300]})
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
         selftest(sys.argv[2:]); return
+    if len(sys.argv) > 1 and sys.argv[1] == "--control":
+        asyncio.run(control()); return
+    if len(sys.argv) > 1 and sys.argv[1] == "--serena-tools":
+        serena_tools(); return
     asyncio.run(serve())
 
 if __name__ == "__main__":

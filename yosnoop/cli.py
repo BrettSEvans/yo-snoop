@@ -7,12 +7,19 @@ ROSTER = Path(__file__).resolve().parent.parent / "config" / "team.json"
 
 def main(argv: list[str]) -> int:
     if not argv:
-        print("usage: ./snoop {setup|desk|doctor|whoami}"); return 2
+        print("usage: ./snoop {setup|prepare|desk|doctor|whoami}"); return 2
     cmd, rest = argv[0], argv[1:]
     if cmd == "whoami":
         m = hostcfg.load_host(load(ROSTER)); print(f"Snoop ({m.display_name}) — host {m.email}"); return 0
     if cmd == "setup":
         from yosnoop.setup_mac import run_setup; return run_setup(rest)
+    if cmd == "prepare":
+        from yosnoop.prepare import prepare
+        rep = prepare(dev="--dev" in rest, sync="--no-sync" not in rest)
+        print(f"prepare: {'ok' if rep.ok else 'problems'}; registry entries: {rep.bundle_entries}")
+        for e in rep.errors:
+            print(f"  - {e}")
+        return 0 if rep.ok else 1
     if cmd == "doctor":
         from yosnoop.doctor import run_doctor; return run_doctor(rest)
     if cmd == "desk":
