@@ -10,8 +10,9 @@ def brain_wrapper(runtime: Path, knowledge: Path) -> str:
             f"exec {runtime}/.venv/bin/python -m yosnoop.brain_main \"$@\"\n")
 
 
-def serena_cmd(runtime: Path) -> list[str]:
-    return [str(runtime / "serena-venv" / "bin" / "serena"), "start-mcp-server"]
+def serena_cmd(runtime: Path, project: Path) -> list[str]:
+    from yosnoop.serena_cfg import START_ARGS
+    return [str(runtime / "serena-venv" / "bin" / "serena"), *START_ARGS, "--project", str(project)]
 
 
 def _interpreter(py: Path) -> Path:

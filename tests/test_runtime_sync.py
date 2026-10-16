@@ -23,4 +23,6 @@ def test_serena_gets_its_own_pinned_venv(tmp_path):
     flat = [" ".join(map(str, c)) for c in calls]
     assert SERENA_PIN == "serena-agent==2.0.0"
     assert any(str(rt / "serena-venv") in c and SERENA_PIN in c for c in flat)
-    assert serena_cmd(rt)[0] == str(rt / "serena-venv" / "bin" / "serena")
+    c = serena_cmd(rt, tmp_path / "k")
+    assert c[0] == str(rt / "serena-venv" / "bin" / "serena") and c[-2:] == ["--project", str(tmp_path / "k")]
+    assert "ide" in c
