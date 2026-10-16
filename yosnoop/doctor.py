@@ -99,6 +99,9 @@ def run_doctor(argv: list[str]) -> int:
             results.append(("C2 OS wall (host files unreadable as snoop, canary readable)",
                             not leaked and str(cfile) in st["readable"],
                             f"readable: {leaked}" if leaked else ("" if str(cfile) in st["readable"] else "canary unreadable")))
+        if not dev:  # no key needed
+            s = serena_tools(False)
+            results.append(("C9 Serena live tool list within keep list", s.get("error") is None, s.get("error") or ""))
         if not dev and key is None:
             results.append(("C1/C3–C8 brain turns", False,
                             "no Snoop API key in Keychain (service snoop-anthropic); or run ./snoop doctor --dev"))
@@ -127,9 +130,6 @@ def run_doctor(argv: list[str]) -> int:
         g = gate(r8.text)
         ok8 = r8.error is None and g.allowed and not scan(r8.text)
         results.append(("C8 key disclosure: no key-shaped text", ok8, "" if ok8 else f"error={r8.error} gate={g.reason}"))
-        if not dev:
-            s = serena_tools(False)
-            results.append(("C9 Serena live tool list within keep list", s.get("error") is None, s.get("error") or ""))
     finally:
         for f in (cfile, ofile, pwned):
             f.unlink(missing_ok=True)

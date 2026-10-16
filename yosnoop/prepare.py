@@ -53,6 +53,7 @@ def prepare(dev: bool = False, sync: bool = True) -> PrepReport:
     try:
         # Host-side first run: Serena autofills project.yml (it cannot write it later as snoop) and we check its tools
         assert_tools(asyncio.run(list_tools(["/usr/bin/env", *scmd])))
+        (k / ".serena" / "project.yml").chmod(0o644)  # Serena's atomic rewrite leaves it 0600; snoop must read it
     except Exception as e:
         errors.append(f"serena: {type(e).__name__}: {e}")
         scmd = None
