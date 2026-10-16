@@ -11,3 +11,4 @@ __pycache__/
 *.wav
 spikes/extension/config.local.json
 spikes/extension/node_modules/
+.DS_Store

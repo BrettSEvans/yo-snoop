@@ -1057,9 +1057,9 @@ wheels = [
 ]
 
 [[package]]
-name = "yo-snoop-spikes"
+name = "yo-snoop"
 version = "0.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "claude-agent-sdk" },
