@@ -1,4 +1,5 @@
 import json, re, shutil
+from yosnoop.gate import redact_file
 from pathlib import Path
 
 TOP_FILES = ("registry.json", "events.ndjson", "runs.json", "recent.json")
@@ -47,4 +48,7 @@ def build_bundle(agent_c_home: Path, dest: Path) -> int:
         if isinstance(pid, str) and pid.startswith("/"):
             e["parentId"] = moved.get(pid)
     (dest / "registry.json").write_text(json.dumps(reg, indent=1))
+    for f in dest.rglob("*"):  # nothing key-shaped reaches the brain
+        if f.is_file():
+            redact_file(f)
     return n

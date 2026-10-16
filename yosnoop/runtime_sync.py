@@ -6,8 +6,9 @@ SERENA_PIN = "serena-agent==2.0.0"  # first release with the #1938 read_only fix
 
 
 def brain_wrapper(runtime: Path, knowledge: Path) -> str:
-    return (f"#!/bin/sh\nexport HOME=/Users/snoop\ncd {knowledge}\n"
-            f"exec {runtime}/.venv/bin/python -m yosnoop.brain_main \"$@\"\n")
+    # -I: no cwd on sys.path and no PYTHON* env, so nothing in the knowledge dir can be imported
+    return (f"#!/bin/sh\nexport HOME=/Users/snoop\ncd \"{knowledge}\" || exit 1\n"
+            f"exec \"{runtime}/.venv/bin/python\" -I -m yosnoop.brain_main \"$@\"\n")
 
 
 def serena_cmd(runtime: Path, project: Path) -> list[str]:

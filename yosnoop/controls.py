@@ -11,6 +11,7 @@ class ControlResult:
     error: str | None
     denials: int
     tools_seen: list[str] = field(default_factory=list)
+    tools_called: list[str] = field(default_factory=list)
 
 
 def brain_cmd(dev: bool, *args: str) -> list[str]:
@@ -40,7 +41,7 @@ def run_control(prompt: str, dev: bool, api_key: str | None, envprobe: str | Non
     r = next((o for o in outs if o.get("type") == "control_result"), None)
     if r is None:
         return ControlResult("", "no-result", 0)
-    return ControlResult(r["text"], r["error"], r["denials"], r["tools_seen"])
+    return ControlResult(r["text"], r["error"], r["denials"], r["tools_seen"], r.get("tools_called", []))
 
 
 def selftest(dev: bool, targets: list[str]) -> dict:

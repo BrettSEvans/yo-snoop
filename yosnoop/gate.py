@@ -33,3 +33,24 @@ def gate(answer: str) -> GateResult:
     if hits:
         return GateResult(False, BLOCKED, "secret:" + ",".join(hits))
     return GateResult(True, answer, None)
+
+
+def redact(text: str) -> str:
+    """Knowledge-side scrub: replace anything key-shaped before the brain can read it."""
+    for rx in PATTERNS.values():
+        text = rx.sub("[REDACTED]", text)
+    return text
+
+
+def redact_file(path) -> bool:
+    """Redact a text file in place; True if anything was replaced. Binary files are left alone."""
+    from pathlib import Path
+    p = Path(path)
+    try:
+        t = p.read_text()
+    except (UnicodeDecodeError, OSError):
+        return False
+    r = redact(t)
+    if r != t:
+        p.write_text(r)
+    return r != t

@@ -47,3 +47,22 @@ def test_tools_control():
     assert judge_tools(ok + ["mcp__serena__replace_symbol_body"])[0] is False
     assert judge_tools(ok + ["RemoteTrigger"])[0] is False
     assert judge_tools([])[0] is False
+
+def test_no_leak_control_needs_a_tool_attempt():
+    from yosnoop.doctor import judge_no_leak
+    r = ControlResult(text="nope", error=None, denials=0, tools_seen=[], tools_called=[])
+    assert judge_no_leak(r, "CANARY-OUT", True)[0] is False
+    r2 = ControlResult(text="outside the project", error=None, denials=0, tools_seen=[], tools_called=["mcp__serena__read_file"])
+    assert judge_no_leak(r2, "CANARY-OUT", True) == (True, "")
+
+def test_shared_tree_rejects_symlink_and_writable(tmp_path):
+    import getpass
+    from yosnoop.doctor import shared_tree_ok
+    s = tmp_path / "s"
+    for d in ("", "knowledge", "runtime", "bin"):
+        (s / d).mkdir(parents=True, exist_ok=True); (s / d).chmod(0o750)
+    assert shared_tree_ok(s, getpass.getuser()) == (True, "")
+    (s / "bin").chmod(0o770)
+    assert shared_tree_ok(s, getpass.getuser())[0] is False
+    (tmp_path / "link").symlink_to(s)
+    assert shared_tree_ok(tmp_path / "link", getpass.getuser())[0] is False

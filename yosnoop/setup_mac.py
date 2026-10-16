@@ -28,8 +28,14 @@ chmod 700 /Users/snoop
 # 2. group that may read the shared knowledge
 dseditgroup -o read snoopread >/dev/null 2>&1 || dseditgroup -o create snoopread
 dseditgroup -o edit -a snoop -t user snoopread
-# 3. shared dirs: created fresh, owner writes, snoop reads; no recursion over existing content
+# 3. shared dirs: created atomically (no -p) or verified owner-owned; /Users/Shared is sticky, so once the host
+#    owns a real directory nobody else can swap it. No recursion over existing content.
+if mkdir -m 750 "$SHARED" 2>/dev/null; then chown {owner}:snoopread "$SHARED"
+elif [ -L "$SHARED" ] || [ ! -d "$SHARED" ] || [ "$(stat -f %Su "$SHARED")" != "{owner}" ]; then
+  echo "refusing: $SHARED changed during setup"; exit 1
+fi
 install -d -o {owner} -g snoopread -m 750 "$SHARED" "$SHARED/knowledge" "$SHARED/runtime" "$SHARED/bin"
+if [ -L "$SHARED" ] || [ "$(stat -f %Su "$SHARED")" != "{owner}" ]; then echo "refusing: $SHARED not owner's"; exit 1; fi
 # 4. the wall: owner's home closed to every other local user
 chmod 700 {owner_home}
 # 5. owner may start the brain as snoop, nothing else; HOME is snoop's own

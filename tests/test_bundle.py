@@ -63,3 +63,9 @@ def test_path_shaped_parent_ids_are_rewritten(tmp_path):
     build_bundle(home, tmp_path / "out")
     e = json.loads((tmp_path / "out" / "registry.json").read_text())["entries"]
     assert e[1]["parentId"] == str(tmp_path / "out" / "projects" / "p") and e[2]["parentId"] is None
+
+def test_key_shaped_text_in_copied_files_is_redacted(tmp_path):
+    home, proj = make_home(tmp_path)
+    (home / "events.ndjson").write_text('{"note": "' + "ghp_" + "R" * 36 + '"}\n')
+    build_bundle(home, tmp_path / "out")
+    assert "ghp_" not in (tmp_path / "out" / "events.ndjson").read_text()

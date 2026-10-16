@@ -26,3 +26,7 @@ def test_scanner_crash_blocks(monkeypatch):
     monkeypatch.setattr(gate, "scan", lambda t: (_ for _ in ()).throw(RuntimeError("boom")))
     r = gate.gate("anything")
     assert not r.allowed and r.reason == "scanner-error"
+
+def test_redact_replaces_key_shaped_text():
+    t = "token " + k("ghp_", "Q" * 36) + " ok"
+    assert gate.redact(t) == "token [REDACTED] ok" and gate.gate(gate.redact(t)).allowed

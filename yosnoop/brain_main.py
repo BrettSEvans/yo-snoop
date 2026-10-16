@@ -5,13 +5,21 @@ from pathlib import Path
 def out(obj): sys.stdout.write(json.dumps(obj) + "\n"); sys.stdout.flush()
 
 def selftest(paths):
-    readable, unreadable = [], []
+    """Directories are probed by listing them (open() on a directory always fails, whatever its mode)."""
+    import os
+    readable, unreadable, missing = [], [], []
     for p in paths:
         try:
-            open(p, "rb").read(1); readable.append(p)
+            if os.path.isdir(p):
+                os.listdir(p)
+            else:
+                open(p, "rb").read(1)
+            readable.append(p)
+        except FileNotFoundError:
+            missing.append(p)
         except OSError:
             unreadable.append(p)
-    out({"readable": readable, "unreadable": unreadable})
+    out({"readable": readable, "unreadable": unreadable, "missing": missing})
 
 def clone_age(k: Path) -> float:
     f = k / "refreshed-at"
@@ -29,8 +37,11 @@ async def serve():
         line = await loop.run_in_executor(None, sys.stdin.readline)
         if not line:
             break
-        msg = json.loads(line)
-        t = msg.get("type")
+        try:
+            msg = json.loads(line)
+            t = msg.get("type") if isinstance(msg, dict) else None
+        except ValueError:
+            out({"type": "error", "id": None, "reason": "bad-json"}); continue
         if t == "key":
             credential, key = "key", msg["value"]; continue
         if t == "dev":
@@ -40,15 +51,16 @@ async def serve():
             continue
         if t != "ask":
             continue
-        if credential is None:
-            out({"type": "error", "id": msg["id"], "reason": "no-credential"}); continue
+        if credential is None or not isinstance(msg.get("question"), str):
+            out({"type": "error", "id": msg.get("id"), "reason": "no-credential" if credential is None else "bad-ask"})
+            continue
         try:
             if client is None:
                 client = ClaudeSDKClient(options=build_options(k, cfg.get("registry_cmd"), cfg.get("serena_cmd"),
                                                                cfg.get("model", "claude-sonnet-5-5"),
                                                                cfg.get("persona", ""), api_key=key))
                 await client.__aenter__()
-            await client.query(f"[{msg['asker']} asks, room={msg['room']}] {msg['question']}")
+            await client.query(f"[{msg.get('asker', '?')} asks, room={msg.get('room', '?')}] {msg['question']}")
             text = ""
             async def collect():
                 nonlocal text
@@ -56,10 +68,10 @@ async def serve():
                     if isinstance(m, ResultMessage):
                         text = m.result or ""
             await asyncio.wait_for(collect(), timeout=90)
-            out({"type": "answer", "id": msg["id"], "text": text, "clone_age_s": clone_age(k)})
+            out({"type": "answer", "id": msg.get("id"), "text": text, "clone_age_s": clone_age(k)})
         except Exception as e:
             reason = "timeout" if isinstance(e, asyncio.TimeoutError) else type(e).__name__
-            out({"type": "error", "id": msg["id"], "reason": reason})
+            out({"type": "error", "id": msg.get("id"), "reason": reason})
             if client:  # a half-finished turn must not bleed into the next answer
                 try:
                     await client.__aexit__(None, None, None)
@@ -71,7 +83,7 @@ async def serve():
 
 async def control():
     """One doctor turn through the production options. Reports text, error, denials and the init tool list."""
-    from claude_agent_sdk import ClaudeSDKClient, ResultMessage, SystemMessage
+    from claude_agent_sdk import ClaudeSDKClient, ResultMessage, SystemMessage, AssistantMessage, ToolUseBlock
     from yosnoop.brain_opts import build_options, KEY_STRIP
     from yosnoop import paths
     k = paths.knowledge_dir()
@@ -86,12 +98,14 @@ async def control():
         cmd = [*KEY_STRIP, *probe] if req["envprobe"] == "wrapped" else probe
         opts.mcp_servers = {**opts.mcp_servers, "envprobe": {"type": "stdio", "command": cmd[0], "args": cmd[1:]}}
         opts.allowed_tools = [*opts.allowed_tools, "mcp__envprobe__env_probe"]
-    res = {"type": "control_result", "text": "", "error": None, "denials": 0, "tools_seen": []}
+    res = {"type": "control_result", "text": "", "error": None, "denials": 0, "tools_seen": [], "tools_called": []}
     try:
         async with ClaudeSDKClient(options=opts) as c:
             await c.query(req["prompt"])
             async def collect():
                 async for m in c.receive_response():
+                    if isinstance(m, AssistantMessage):
+                        res["tools_called"] += [b.name for b in m.content if isinstance(b, ToolUseBlock)]
                     if isinstance(m, SystemMessage) and m.subtype == "init":
                         res["tools_seen"] = sorted(m.data.get("tools", []))
                     if isinstance(m, ResultMessage):

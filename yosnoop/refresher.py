@@ -1,7 +1,7 @@
 import json, subprocess, time
 from dataclasses import dataclass, field
 from pathlib import Path
-from yosnoop.gate import scan
+from yosnoop.gate import scan, redact
 
 REPOMIX = "repomix@1.18.1"
 # Orientation only (~104k tokens on 2026-10-16); code is reached through Serena and file reads
@@ -53,7 +53,7 @@ class Refresher:
                 subprocess.run(["git", "-C", str(clone), "reset", "-q", "--hard", "origin/main"], check=True)
             else:
                 subprocess.run(["git", "clone", "-q", self.origin, str(clone)], check=True)
-            (self.k / "git-facts.txt").write_text(git_facts(clone))
+            (self.k / "git-facts.txt").write_text(redact(git_facts(clone)))
             (self.k / "refreshed-at").write_text(str(self.now()))
         except subprocess.CalledProcessError as e:
             errors.append(f"git: {e}")
@@ -62,7 +62,7 @@ class Refresher:
                                                            "number,title,state,author,mergedAt,reviewDecision,headRefName"])),
                       "runs": json.loads(self.gh(["run", "list", "--limit", "30", "--json",
                                                   "headBranch,conclusion,status,createdAt,workflowName"]))}
-            (self.k / "pr-ci-status.json").write_text(json.dumps(status, indent=1))
+            (self.k / "pr-ci-status.json").write_text(redact(json.dumps(status, indent=1)))
         except Exception as e:
             errors.append(f"gh: {type(e).__name__}")
         blocked, map_path = False, self.k / "repo-map.xml"

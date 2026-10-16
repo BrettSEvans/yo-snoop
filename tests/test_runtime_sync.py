@@ -5,8 +5,8 @@ def test_wrapper_sets_home_and_cwd_and_never_names_a_host_home():
     w = brain_wrapper(Path("/Users/Shared/snoop/runtime"), Path("/Users/Shared/snoop/knowledge"))
     assert w.startswith("#!/bin/sh\n")
     assert "export HOME=/Users/snoop" in w
-    assert "cd /Users/Shared/snoop/knowledge" in w
-    assert "exec /Users/Shared/snoop/runtime/.venv/bin/python -m yosnoop.brain_main" in w
+    assert 'cd "/Users/Shared/snoop/knowledge" || exit 1' in w
+    assert 'exec "/Users/Shared/snoop/runtime/.venv/bin/python" -I -m yosnoop.brain_main' in w
     assert "$HOME" not in w.split("export HOME=/Users/snoop", 1)[1] and "~" not in w
 
 def test_sync_uses_a_python_outside_any_home(tmp_path):

@@ -35,3 +35,8 @@ def test_hidden_non_admin_user_with_no_shell():
 def test_script_is_valid_bash(tmp_path):
     f = tmp_path / "s.sh"; f.write_text(S)
     assert subprocess.run(["bash", "-n", str(f)]).returncode == 0
+
+def test_shared_dir_created_atomically_and_rechecked():
+    assert 'mkdir -m 750 "$SHARED"' in S and "mkdir -p" not in S
+    after = S.split("install -d -o", 1)[1]
+    assert '[ -L "$SHARED" ]' in after and "refusing" in after
