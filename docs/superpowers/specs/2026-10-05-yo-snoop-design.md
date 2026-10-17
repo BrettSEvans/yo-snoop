@@ -1,7 +1,7 @@
 # Snoop: voice bot for Saasless Google Meet meetings — design
 
-**Status:** approved 2026-10-05 · **Date:** 2026-10-05 · **Owner:** Brett Evans
-**Audience:** Saasless team only (Brett, Jeremy, Lindsay). Internal tool; never customer-facing.
+**Status:** approved 2026-10-05; revised 2026-10-06 (D26–D36); **revised 2026-10-09** after the adversarial review (D25 rewritten, D33 rewritten, D37–D41) · **Owner:** Brett Evans
+**Audience:** Saasless team only — the members listed in the team roster (D31), today Brett, Jeremy, Lindsay. Internal tool; never customer-facing.
 
 ## 1. Purpose
 
@@ -11,7 +11,7 @@ how many v1→v2 gaps remain, what a run costs, where a branch stands. Today tho
 answers wait until after the meeting (the 2026-10-05 standup notes record Brett
 unsure of v2's atomic-workflow mechanics mid-meeting).
 
-Snoop is a bot that joins Saasless Google Meet calls, answers spoken questions
+Snoop takes a team member's seat (the **host**) in Saasless Google Meet calls, answers spoken questions
 about the Agent-C repo when addressed with "Yo Snoop", and speaks or posts the
 answer — without putting repo content on an internet-facing machine or in front
 of anyone outside Saasless.
@@ -20,70 +20,108 @@ of anyone outside Saasless.
 correctly (Brett grades against the repo), never speaks while a non-`saasless.ai`
 participant is present, and passes every negative control in §9.
 
-## 2. Decisions (owner, 2026-10-05)
+## 2. Decisions (owner)
 
 | # | Decision |
 |---|---|
 | D1 | IP-safe first. Security constraints win over convenience. |
-| D2 | Participants: Brett, Jeremy, Lindsay, all on `saasless.ai`. |
-| D3 | Hybrid: cloud VM is ears and mouth only; the brain runs on team Macs. |
+| D2 | Team: the members in the roster (D31), all on `saasless.ai`; today Brett, Jeremy, Lindsay. |
+| D3 | ~~Hybrid cloud VM + Mac brain.~~ **Superseded by D26** (2026-10-06): everything runs on the host's Mac; no VM. |
 | D4 | Any participant whose account is not `saasless.ai` (gmail, other company, anonymous, dial-in) makes the room **mixed**. |
-| D5 | Mixed room: only brett@, jeremy@, lindsay@startup.ai may ask; answers go to Google Chat, never spoken. |
+| D5 | Mixed room: only roster members marked `mixed_room_asker` (today brett@, jeremy@, lindsay@) may ask; answers go to Google Chat, never spoken. |
 | D6 | "Peanut butter" from anyone mutes speech until "Yo Snoop" is said again. It does not cancel research or Chat posts. |
 | D7 | Wake phrase is "Yo Snoop". |
-| D8 | Speech via Meet captions in, Google Cloud TTS out (approach A); self-hosted Whisper is the fallback (B). Deepgram/ElevenLabs rejected: new vendors hearing all audio. |
-| D9 | One fixed Google Chat space with the three team members; answers @-mention the asker. |
-| D10 | Bot joins as a dedicated `agent-c@startup.ai` Workspace account. |
+| D8 | Speech in: Meet's own live captions, read from the Meet page by the Snoop extension (D27). Speech out: Google Cloud TTS. Fallback for input: self-hosted Whisper. Deepgram/ElevenLabs rejected: new vendors hearing all audio. |
+| D9 | One fixed Google Chat space whose members are the roster's Google Group; answers @-mention the asker. |
+| D10 | ~~Dedicated `agent-c@startup.ai` account.~~ **Superseded by D26** (2026-10-06): no bot account; Snoop sits in the host's own seat. |
 | D11 | Voice character: the `snoop` output style (`~/.claude/output-styles/snoop.md`), curse words off. Stock Google voice — no imitation of Snoop Dogg's real voice. |
 | D12 | "Ask the repo anything": the brain reads the full repo (code, docs, all branches), not a curated snapshot. |
-| D13 | Brain may run on Brett's, Jeremy's or Lindsay's Mac. |
-| D14 | Code lives in a separate private repo, `brett-saasless/yo-snoop`, never in Agent-C (Agent-C's customer export ships all of `scripts/`). |
-| D15 | v1 brain on Brett's Mac uses registry-mcp read tools. **v2 requirement:** registry-mcp works on Jeremy's and Lindsay's Macs. |
+| D13 | **v1 supports any roster member as host**, on their own Mac, Google account and Snoop API key; the card names the host ("Snoop (Jeremy Leeds)"). Rollout order: Brett's Mac passes rehearsal first, then Jeremy's and Lindsay's installs. Two Snoops in one meeting are resolved by D32. |
+| D14 | Code lives in a separate private repo, `brett-saasless/yo-snoop`, never in Agent-C (Agent-C's customer export ships `scripts/` compiled, minus 12 named exclusions, so any new file there ships by default — corrected 2026-10-09 per the review). |
+| D15 | v1: only Brett's Mac has the live registry, so only a Brett-hosted Snoop uses registry-mcp read tools; on other hosts Snoop says "that's on Brett's machine". **v2 requirement:** registry-mcp works on every host's Mac. |
 | D16 | Owner's macOS home is set to `700` by the installer. |
-| D17 | Snoop's Google account communicates only by speaking in a meeting when allowed and by Chat to Brett, Jeremy and Lindsay. |
+| D17 | Snoop communicates only by speaking in a meeting when allowed and by Chat to the team space. The extension never sends Meet chat, email, or anything else from the host's account. |
 | D18 | Spoken answers: 3 sentences, then ask the room if they want more and on what; continue in ~75 s chunks that end on a complete thought, asking again after each. |
 | D19 | v2 direction: Snoop's own MCP server reading a Google Drive folder for the meeting (code or document sets), not only the Agent-C repo. Out of v1. §7.1. |
 | D20 | v1 uses Pipecat (Conductor pipeline), repomix (repo map) and Serena (code navigation). Each one's speed is re-measured in rehearsal before it is relied on. |
 | D21 | Serena's editing tools are removed before it is added (§5.3.1). |
 | D22 | Pre-loading in v1: listen to all-team meetings, spot topics, pre-load answers' material into one per-meeting brain session. Memory only; mixed rooms pause it. §4. |
 | D23 | Keep the clone: refreshed every 5 min during meetings, plus a PR/CI status file; refresher runs as the owner so `snoop` holds no GitHub credential. §3.2. |
-| D24 | Snoop joins any Saasless meeting it is invited to, organized by any of Brett, Jeremy or Lindsay — not only standup. P1 testing may use brett@ as a read-only organizer; Attendee never signs in as brett@. |
+| D24 | Snoop joins any Saasless meeting the host is invited to, organized by any roster member — not only standup. |
+| D25 | **Rewritten 2026-10-09.** Development may run on the host's own Claude login. The running Snoop uses an API key from the Anthropic Console organization **linked to the host's Max or Team plan**, so it draws on that plan's included monthly API credits (Max 5x $100, Max 20x $200, Team pooled up to $500; rollout began 2026-10-07). When credits run out, requests pause instead of billing the plan (unless purchased Console credits exist). A `Snoop` workspace spend limit caps it. Source: support article 17154008 and platform docs "API credits for subscribers". A subscription login is never placed where `snoop` can read it. |
+| D26 | **Chrome-profile approach (2026-10-06):** Snoop takes the host's own seat. The host signs in to Google themselves in a dedicated Chrome profile used only for Snoop; Snoop never handles the host's password and never signs in as them. No VM, no Attendee, no extra Google account. Rejected alternative: SAML sign-in of a bot as brett@ (would let a signing key sign in as Brett everywhere). |
+| D27 | A Snoop Chrome extension, loaded unpacked only in that profile, reads Meet's captions and speaker names, supplies Snoop's voice, and shows the video card. Host permission `https://meet.google.com/*` only. |
+| D28 | Disclosure: Snoop's camera tile is a card reading **"Snoop (<host display name>)"** — e.g. "Snoop (Brett Evans)", "Snoop (Jeremy Leeds)" — from the roster, and every spoken answer starts with **"Snoop here"**. The spoken label is mandatory even if the card fails. The Google account name is never changed. |
+| D29 | Snoop's voice reaches Meet through the extension (supplying the tab's microphone); fallback is the BlackHole virtual audio device. Chosen by Plan 0 probe. |
+| D30 | Snoop ignores captions of its own speech (labeled as the host's own seat) so it never reacts to itself. |
+| D31 | **Team roster** (2026-10-06): one file, `config/team.json` in this repo, lists every member — email, display name, host priority, `may_host`, `mixed_room_asker`. Adding a person is a roster change plus adding them to the Google Group `snoop-team@startup.ai` (Chat space membership and Chat app visibility follow the group) and running the installer on their Mac. No code names a person. |
+| D32 | **One Snoop per meeting** (2026-10-06): a Snoop that hears another seat's caption beginning "Snoop here" compares roster host priority; the lower-priority Snoop goes passive for the rest of the meeting (no speech, no Chat answers) and posts once to Chat that it stood down. Worst case both speak for about a second on the first answer. Team habit: one host per meeting. |
+| D33 | **Rewritten 2026-10-09 (owner): desk first.** **Phase 1a — Desk Snoop:** any roster member runs Snoop on their own Mac; they say "Yo Snoop …" into the Mac's microphone and Snoop answers through its speakers. Speech recognition and voice run on the Mac (no Google, no Meet). Same sandboxed brain and answer gate. Longer answers print in full in the terminal. **Phase 1b — Meet seat:** the Chrome-profile seat (D26–D32), built on the same brain after Phase 1a works. **Phase 2:** pre-loading (D22) and 75-second pacing (D18). |
+| D34 | **Runs from a local clone (2026-10-06):** no packaged installer. Each host runs `git clone`, then `./snoop setup` once (one admin password: creates the `snoop` user, sets the host's home to `700`, creates `/Users/Shared/snoop` readable by `snoop` but writable only by the host, and a sudoers rule letting the host start the brain as `snoop` without a password), then `./snoop start` before meetings, `git pull` to update. The refresher runs inside `./snoop start` (every 5 min while running) instead of a launchd job, and uses the host's existing git/`gh` login — no separate deploy key in Phase 1. |
+| D35 | **Brain key handling (2026-10-06):** the Snoop API key lives in the **host's** Keychain; `./snoop start` reads it and hands it to the brain on **stdin** at launch. It is never a file `snoop` can read, never on a command line, never in logs. `./snoop start --dev` runs the brain as the host on the host's own Claude login, sandbox off, for development only (D25). |
+| D36 | **Phase 1 delivery is a small asyncio pipeline** (brain answer → gate → per-sentence room re-check → Google TTS → extension); Pipecat (D20) is evaluated in Phase 2, when pre-loading and pacing need streaming and interruption handling. Phase 1 speaks once the brain's full answer is ready. |
+| D37 | **Desk speech (2026-10-09):** speech in = local Whisper (`faster-whisper`, MIT) on the Mac's microphone with on-device voice-activity detection; speech out = macOS `say`. No audio or transcript leaves the Mac; only the question text goes to the brain. While Snoop speaks, the microphone listens only for "peanut butter" (no wake), so Snoop cannot wake itself; answers never contain the phrase "peanut butter". |
+| D38 | **Brain reach (2026-10-09, review defects 2, 6):** the brain has **no Bash tool**. `Read`/`Grep`/`Glob` are path-scoped to the knowledge directory; git history comes from a `git-facts.txt` the refresher writes (branches, last commits per branch, recent commits with changed files). `snoop` gets its **own primary group**, not `staff`. |
+| D39 | **Key containment (2026-10-09, review defect 3):** the API key is passed only to the Claude CLI process; every MCP server is launched through `/usr/bin/env -u ANTHROPIC_API_KEY …` so Serena, its language servers and registry-mcp never inherit it. `--dev` runs with the same path-scoped tools, refuses to start while a Meet room is live (Phase 1b), and prints a warning on every start. |
+| D40 | **Setup hardening (2026-10-09, review defects 5, 10b–d):** setup refuses if `/Users/Shared/snoop` already exists and is not a real directory owned by the host; it never recurses with `chown -R`/`chmod -R` over pre-existing content; sudoers adds `Defaults>snoop always_set_home`; the brain wrapper sets `HOME=/Users/snoop` and its working directory explicitly. |
+| D41 | **Room check fails closed on an empty list (2026-10-09, review defect 1, Phase 1b):** zero active conference records, or zero participants other than the host's own seat, is **mixed**; both list calls paginate. |
 
 ## 3. Components
 
 ```
- Google Meet ──captions──▶ [VM] Attendee ──▶ [VM] Conductor ──question──▶ [Mac] Brain
-      ▲                          ▲                 │   ▲                      │
-      └──── Google TTS audio ────┘                 │   └──────── answer ──────┘
-                                                   ▼
-                                   [VM] Chat poster ──▶ team Chat space
+                       Host's Mac
+ ┌───────────────────────────────────────────────────────────────────────┐
+ │  Chrome profile "Snoop" (host signs in as themselves)                 │
+ │   Meet tab ◀── Snoop extension: captions out · voice + card in        │
+ │                      │  ▲  localhost websocket (127.0.0.1, token)     │
+ │                      ▼  │                                             │
+ │  Conductor (owner) ── question ──▶ Brain (macOS user `snoop`)         │
+ │     │  ▲  room check (Meet REST)        │ read-only clone, repo map,  │
+ │     │  └────────── answer ◀── gate ─────┘ registry bundle, Serena     │
+ │     ▼                                                                 │
+ │  Chat poster ──▶ team Chat space        Google TTS ──▶ voice          │
+ └───────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.1 Cloud VM — ears and mouth; holds no repo, snapshot or IP
+### 3.1 The meeting seat (host's Mac, owner side)
 
-1. **Attendee** (self-hosted, pinned version; Elastic License 2.0 — internal use
-   permitted). Joins Meet as `agent-c@startup.ai`, transcribes from Meet's own
-   closed captions (`meeting_closed_captions` provider), speaks via its built-in
-   Google TTS.
-2. **Conductor** (our code, built on [Pipecat](https://github.com/pipecat-ai/pipecat),
-   BSD-2, D20). Wake/stop detection, room check, asker check, delivery choice,
-   brain routing, pacing. §4. Pipecat supplies the streaming pipeline: the
-   brain's answer streams back and is spoken sentence by sentence, so the first
-   word does not wait for the whole answer; it also handles interruption (the
-   "peanut butter" cut). Requires the brain connector to stream text.
-3. **Chat poster.** Google Chat app (service account, `chat.bot` scope). Posts
-   only to the one configured space ID; any other destination is refused in code.
+1. **Chrome profile "Snoop".** A dedicated profile the host signs in to as
+   themselves, used only for Snoop meetings. In v1 the host opens the meeting
+   link in it and clicks Join; Snoop then holds the seat and the host can step
+   away. Captions are turned on in that tab.
+2. **Snoop extension (D27).** Manifest V3, unpacked, never published.
+   - Host permission `https://meet.google.com/*` only. No `tabs`, `cookies`,
+     `identity`, `history`, `downloads`, or other-site access.
+   - Reads caption lines and speaker names from the Meet page and sends them to
+     the Conductor over a localhost websocket (`127.0.0.1` only, per-install
+     token).
+   - Supplies Snoop's voice as the tab's microphone (D29) and the
+     "Snoop (<host display name>)" card from the roster as the tab's camera (D28), by providing those
+     media streams to the Meet page. If the probe shows voice injection is
+     unreliable, voice goes through BlackHole instead (Chrome mic set to
+     BlackHole in that profile).
+   - Never clicks, types or sends anything in Meet except: turning captions on,
+     and, if ever automated, Join. Never sends Meet chat (D17).
+3. **Conductor** (our code, built on [Pipecat](https://github.com/pipecat-ai/pipecat),
+   BSD-2, D20), runs as the **owner**. Wake/stop detection, room check, asker
+   check, delivery choice, pacing, pre-loading. §4. Streams the brain's answer
+   sentence by sentence into Google TTS and on to the extension, so the first
+   word does not wait for the whole answer; handles the "peanut butter" cut.
+4. **Chat poster.** Google Chat app (service account, `chat.bot` scope), run by
+   the Conductor. Posts only to the one configured space ID; any other
+   destination is refused in code.
 
-**VM credentials:** bot Google sign-in (SAML, via Attendee), Meet read-only scope
-for the participant check, Chat app service account, Google TTS service account,
-per-Mac brain connection keys. **No Anthropic key. No GitHub token.**
+**Owner-side credentials** (never readable by `snoop`): the host's read-only
+Meet token (`meetings.space.readonly`, for the room check), the Chat app
+service-account key, the Google TTS service-account key, the extension's
+localhost token. The host's Google password and session stay inside Chrome;
+Snoop's code never reads Chrome's cookies or storage.
 
-### 3.2 Team Macs — the brain (same installer on all three)
+### 3.2 The brain (same Mac, sandboxed)
 
-4. **Brain connector.** Dials **out** to the VM over an authenticated, encrypted
-   connection; no inbound port on any laptop. One revocable credential per Mac.
-5. **Sandboxed Claude Code (headless)**, run as macOS user `snoop`. §5.
-6. **Knowledge refresher (D23).** Runs as the **Mac's owner** (launchd), not as
+5. **Sandboxed Claude Code (headless, via the Agent SDK)**, run as macOS user
+   `snoop`, reached by the Conductor over a local socket. §5.
+6. **Knowledge refresher (D23, D34).** Runs as the **Mac's owner** inside `./snoop start`, not as
    `snoop`, so `snoop` holds no GitHub credential at all. Writes into a
    directory `snoop` can read but not write. Fetches the Agent-C clone (all
    branches) before each meeting and **every 5 minutes during one**, and writes
@@ -91,58 +129,62 @@ per-Mac brain connection keys. **No Anthropic key. No GitHub token.**
    CI result per branch) from the GitHub API, so the model gets that data with
    no network access of its own. Snoop states the clone's age when it answers.
    Unpushed work is invisible by design; push a WIP branch to show it to Snoop.
-   On Brett's Mac it also builds the
-   `AGENT_C_HOME` bundle (§5.2). It also builds the **repo map** with
-   [repomix](https://github.com/yamadashy/repomix) (MIT, D20): a compressed,
-   single-file view of the clone, loaded as the brain session's cached prefix.
-   Size budget and include filters are set in the plan (Agent-C is too large to
-   pack whole). repomix's built-in secret check runs, and the §5.4 secret scan
-   runs on the map too; a hit blocks the map, not the meeting.
+   On Brett's Mac it also builds the `AGENT_C_HOME` bundle (§5.2). It also
+   builds the **repo map** with [repomix](https://github.com/yamadashy/repomix)
+   (MIT, D20): a compressed, single-file view of the clone, loaded as the brain
+   session's cached prefix. Size budget and include filters are set in the plan
+   (Agent-C is too large to pack whole). repomix's built-in secret check runs,
+   and the §5.4 secret scan runs on the map too; a hit blocks the map, not the
+   meeting.
 
-**Routing:** the VM uses the first connected brain in the order Brett → Jeremy →
-Lindsay. None online → Snoop says "no brain online".
+**`snoop` credentials:** none stored. In production the brain receives a dedicated
+Anthropic API key (own Console workspace, monthly spend limit) on stdin at launch,
+read from the **host's** Keychain by `./snoop start` (D35). Read deny rules
+cover `snoop`'s config and credential paths; the §5.4 secret scan is the
+backstop. Owner-side GitHub credentials: fetch-only deploy key and a
+fine-grained read-only token (pull requests: read, actions: read, metadata).
 
-**Mac credentials:**
-- **Owner (refresher):** fetch-only GitHub deploy key, and a fine-grained
-  read-only GitHub token (pull requests: read, actions: read, metadata) for the
-  PR/CI file. Never readable by `snoop`.
-- **`snoop`:** a dedicated Anthropic API key in its own Console workspace with a
-  monthly spend limit, supplied through Claude Code's key helper from `snoop`'s
-  login Keychain, never a plain file. Read deny rules cover `snoop`'s config
-  and credential paths; the §5.4 secret scan is the backstop.
+### 3.3 Google setup (no new account, no new seat)
 
-### 3.3 Google Workspace setup for `agent-c@startup.ai`
-
-- Own organizational unit. The Attendee SAML SSO profile is assigned to **that
-  OU only** — if it covered more, a leaked signing key could sign in as Brett.
-- Services on: Meet; Chat (receiving membership in the one space only);
-  Calendar **read-only, RSVP replies off** (the Conductor reads its invites to
-  know which meetings to join).
-- Services off: Gmail, Drive, Docs, and everything else.
-- Meet in-meeting chat: Snoop never posts there (D17).
-- Invited to any Saasless meeting the team chooses (D24); the meeting's name does not matter. Organizer may be Brett, Jeremy or Lindsay.
+- **Google Cloud project `yo-snoop`** (no Workspace seat): Meet REST API, Chat
+  API, People API, Cloud Text-to-Speech API; OAuth consent **Internal**; one
+  Desktop OAuth client for the host's read-only Meet token; service accounts for
+  Chat and TTS.
+- **Google Group `snoop-team@startup.ai`** (free) holds the roster's members.
+- **Chat app** visible to that group only; the one `Snoop` space's members are
+  that group. Adding a person to the group grants both.
+- **Per-host keys:** each host's Mac gets its own Chat and TTS service-account
+  keys and its own Snoop API key (one shared Console workspace, one spend cap),
+  each revocable on its own.
+- **Host account:** unchanged. Its display name is never changed (D28).
 
 ## 4. Conversation flow
 
-1. **Caption arrives** from Attendee with the speaker's display name.
+1. **Caption arrives** from the extension with the speaker's display name.
+   Lines from the host's own seat (Snoop's own voice) are dropped (D30).
 2. **Stop check, every line, first.** "Peanut butter" from anyone: cut audio now,
    enter **muted**. Muted ignores everything except the wake phrase. Research in
    flight continues; finished answers still post to Chat (D6).
 3. **Wake check.** Utterance *starts with* "Yo Snoop" or a caption variant
    ("you Snoop", "yo, Snoopy"). Mid-sentence mentions never trigger. Question
    ends after ~1.5 s of speaker silence. A valid wake also clears muted.
-4. **Room check.** Meet REST participants for this conference, excluding the bot
-   by its user ID. Each signed-in participant resolved against the `saasless.ai`
-   directory. Any anonymous, dial-in, or non-`saasless.ai` participant → mixed.
+4. **Room check.** Meet REST participants for this conference, read with the
+   host's read-only token. Snoop's own seat is the host's user ID. Each
+   signed-in participant resolved against the `saasless.ai` directory. Any
+   anonymous, dial-in, or non-`saasless.ai` participant → mixed.
    **API error or timeout → mixed** (fail closed).
 5. **Asker check.** Speaker display name must match exactly one verified
    `saasless.ai` participant. Duplicate names, or a name matching a non-team
-   record → ignored. Mixed room: asker must also be brett@, jeremy@ or lindsay@.
-6. **Route to brain.** Question + room verdict sent to the routed Mac.
+   record → ignored. Mixed room: asker must also be a roster `mixed_room_asker`.
+   (If the real host also joins from another device, that seat is the same
+   account and counts as team.)
+6. **Ask the brain.** Question + room verdict go to the brain on the same Mac.
 7. **Deliver.**
-   - All-team room: speak per the pacing rule below. Deep dives (>~5 s): say
-     "lemme dig in the repo", post the answer to Chat when ready.
-   - Mixed room: post to Chat @-mentioning the asker; speak only "sent it to Chat".
+   - All-team room: speak per the pacing rule below, starting with "Snoop here"
+     (D28). Deep dives (>~5 s): say "Snoop here, lemme dig in the repo", post
+     the answer to Chat when ready.
+   - Mixed room: post to Chat @-mentioning the asker; speak only "Snoop here,
+     sent it to Chat".
 8. **Re-check before every spoken sentence.** If the room has turned mixed, stop
    speaking and post the remainder to Chat.
 
@@ -173,8 +215,8 @@ questions); deep dives 15–60 s, less when pre-loaded (measured in rehearsal).
 **Pre-loading (D22).** Snoop listens to the whole meeting, not just questions,
 so answers start warm.
 
-1. **Rolling transcript:** the last ~5 min of captions, **in VM memory only**,
-   never written to disk or logs.
+1. **Rolling transcript:** the last ~5 min of captions, **in the Conductor's
+   memory only**, never written to disk or logs.
 2. **Topic spotting:** every ~30 s or on a subject change, a fast model (Haiku
    4.5) extracts topics, ticket IDs, branch and file names from the window.
 3. **Pre-load:** the brain looks those up with its normal read-only tools.
@@ -188,8 +230,9 @@ so answers start warm.
 6. **Prepares, never speaks:** speech still needs "Yo Snoop". "Peanut butter"
    mutes speech but does not stop pre-loading.
 7. **Out of v1:** pre-drafting answers to guessed questions.
-8. **Team notice:** Jeremy and Lindsay are told, before first use, that Snoop
-   hears the whole all-team meeting, not only wake-phrase questions.
+8. **Team notice:** every roster member is told, before first use, that Snoop
+   hears the whole all-team meeting, not only wake-phrase questions, and that
+   it sits in the host's seat.
 
 Pre-loading counts against the same monthly spend limit; its cost per meeting
 hour is measured in rehearsal.
@@ -202,9 +245,10 @@ hour is measured in rehearsal.
   home to `700`. Measured on Brett's Mac 2026-10-05: home was `drwxr-x---`
   group `staff`, and `~/.claude`, `~/.agent-c`, `~/Code` were `drwxr-xr-x` — a
   default new user (group `staff`) could read all of them.
-- **Negative control, every install, every Mac:** as `snoop`, attempt to read
-  `~/.claude/settings.json`, `~/.agent-c/registry.json`, and a file under
-  `~/Code`. Any success aborts the install.
+- **Negative control, every install:** as `snoop`, attempt to read
+  `~/.claude/settings.json`, `~/.agent-c/registry.json`, a file under `~/Code`,
+  and the Chrome profile directory under `~/Library/Application Support/Google/Chrome`.
+  Any success aborts the install.
 - Keychain is per-user; `snoop` cannot reach the owner's.
 
 ### 5.2 What the brain reads
@@ -216,8 +260,6 @@ hour is measured in rehearsal.
   with project paths rewritten to `snoop`'s clones — and registry-mcp started
   against it. Built as a self-contained bundle so v2 only has to transport it
   to Jeremy's and Lindsay's Macs (D15).
-- Questions on Jeremy's/Lindsay's brain that need registry state get "that's on
-  Brett's machine" in v1.
 
 ### 5.3 Claude Code configuration (installer-owned, not writable by `snoop`)
 
@@ -227,11 +269,14 @@ hour is measured in rehearsal.
   `history_events`, `history_metrics`, `server_info`.
 - **Deny:** everything else — `Write`, `Edit`, web tools, sub-agents, other
   shell, every other registry-mcp tool (registry-mcp has no read-only mode).
-  Unlisted tools are denied, never prompted; bypass mode never used.
+  Unlisted tools are denied, never prompted (`permission_mode="dontAsk"`);
+  bypass mode never used. No owner settings, hooks or MCP servers load
+  (`setting_sources=[]`, `strict_mcp_config=True`; P3).
 - **Second net:** registry-mcp runs against the disposable bundle, so a write
   that slipped through changes a copy, never the real registry.
-- **Limits:** 15 turns and 90 s per question. Model is a config value, starting
-  at Sonnet 5.5. Monthly cap enforced by the Console workspace limit.
+- **Limits:** 15 turns and 90 s per question (SDK `max_turns`; the CLI has no
+  `--max-turns`, P3). Model is a config value, starting at Sonnet 5.5. Monthly
+  cap enforced by the Console workspace limit.
 - **Known soft spot:** some `git` flags write files (e.g. `--output`). `snoop`
   can only write in its own home, which is why 5.1 is the wall.
 
@@ -271,16 +316,17 @@ symbol editing (`replace_symbol_body`, `insert_after_symbol`,
 Exact tool names are confirmed against the pinned version's live tool list in
 the plan (class names above map to these snake-case names).
 
-### 5.4 Answer gate (on the Mac, before an answer leaves)
+### 5.4 Answer gate (Conductor, before an answer leaves the Mac)
 
 - Secret scan (patterns from Agent-C `scripts/agent-c-export-audit.js` plus key
-  formats: Anthropic, GitHub, AWS, private keys). **Any hit blocks the whole
-  answer** → "can't share that one". Scanner crash also blocks.
+  formats: Anthropic, GitHub, AWS, Google service-account, private keys).
+  **Any hit blocks the whole answer** → "Snoop here, can't share that one".
+  Scanner crash also blocks.
 - No IP-term filter: answers reach team members only (D5, D17).
 
 ### 5.5 Logs
 
-Per question, on the answering Mac: question, room verdict, answer, tools used,
+Per question, on the host's Mac: question, room verdict, answer, tools used,
 cost, latency. Kept 7 days. Pre-loading logs topics and lookups only, never
 transcript text. No meeting transcript storage anywhere.
 
@@ -288,25 +334,29 @@ transcript text. No meeting transcript storage anywhere.
 
 | Failure | Behavior |
 |---|---|
-| No brain online | "no brain online" |
-| Mac sleeps mid-question | 90 s timeout → "lost my brain, ask again" |
+| Host's Mac sleeps or Chrome closes | Snoop leaves the meeting; Conductor posts "Snoop dropped" to Chat when it can |
+| Brain process down | "Snoop here, my brain's offline" |
+| Question exceeds 90 s | "Snoop here, lost the thread, ask again" |
 | Participant API error/slow | room treated as mixed |
-| Captions miss the wake phrase | nothing (fails quiet) |
+| Captions off or miss the wake phrase | nothing (fails quiet); extension re-enables captions |
+| Meet page change breaks caption reading | extension reports "no captions for 60 s" to the Conductor, which posts a Chat warning; fix and reload |
+| Voice injection fails | fall back to BlackHole (D29); spoken label still required |
+| Camera card fails | meeting continues; spoken "Snoop here" is the disclosure (D28) |
 | Clone refresh fails | answers from the old clone and states its age |
-| Answer gate hit | "can't share that one" |
-| Monthly spend limit hit | "out of budget for the month" |
-| Meet UI change breaks Attendee | pinned version; upgrade deliberately |
-| SAML signing key leaks | rotate; OU scoping limits the account to Meet + Chat |
+| Answer gate hit | "Snoop here, can't share that one" |
+| Monthly spend limit hit | "Snoop here, out of budget for the month" |
 
 ## 7. Non-goals (v1)
 
-- Customer-facing use of any kind (owner decision; also required by ELv2).
+- Customer-facing use of any kind (owner decision).
 - Writes by voice: no tickets, approvals, or code changes.
 - Unprompted interjection.
 - registry-mcp on Jeremy's and Lindsay's Macs (v2, D15).
 - Imitating Snoop Dogg's real voice.
-- Zoom, Teams, or meetings Snoop was not invited to.
-- Any communication from `agent-c@` other than meeting speech and team Chat.
+- Zoom, Teams, or meetings the host is not invited to.
+- Any action from the host's account other than meeting speech, the camera card,
+  turning captions on, and team Chat via the Chat app (D17).
+- Auto-joining meetings from the calendar (v1: the host opens the link).
 - Knowledge sources other than the Agent-C repo and registry (v2, §7.1).
 
 ### 7.1 v2 direction: per-meeting Google Drive knowledge (D19)
@@ -320,71 +370,90 @@ Not designed yet; recorded so v1 does not block it.
   not hard-coded to the Agent-C clone; the allow-list in §5.3 is generated from
   that list.
 - **Open questions for the v2 design:**
-  - **Identity.** D17 and §3.3 turn Drive off for `agent-c@`. Reading Drive needs
-    either Drive on with Viewer-only sharing per folder, or a separate
-    read-only principal. Changes the account's blast radius.
+  - **Identity.** Reading Drive through the host's own account gives the brain
+    the host's whole Drive. Needs a narrow read-only principal or per-folder
+    export instead.
   - **Prompt injection from documents.** A shared doc can contain text aimed at
     Snoop. Read-only tools and the answer gate limit damage; answer steering
     is not prevented.
   - **Who may point Snoop at a folder**, and whether outsiders' shared files are
     ever eligible.
-  - **Product vs internal.** Value as a product conflicts with v1's
-    internal-only rule and with Attendee's ELv2 (no hosted service to third
-    parties). A product version needs its own meeting-bot layer or a
-    commercial license, and its own security review.
+  - **Product vs internal.** A product version needs a meeting-bot layer that
+    does not sit in a customer's own seat, and its own security review.
 
-## 8. Unverified — confirm before the implementation plan
+## 8. Unverified — confirm before Plans 1–2 (Plan 0)
 
-1. Which principal the Meet REST participants call needs (organizer token vs the
-   bot's own account) and its live polling latency.
-2. Meet caption latency and accuracy for the wake phrase in practice.
-3. Exact headless Claude Code flags/settings for the allow/deny lists in 5.3,
-   the API key helper, and keeping one session open for a whole meeting
-   (streaming input or resume) for D22 (probe the real signature before relying
-   on it).
-4. Attendee SAML SSO setup against a Workspace OU-scoped profile.
-5. Google Chat app restricted to one space and three users at the Workspace level.
+1. Which principal the Meet REST participants call needs (organizer token vs a
+   participant's own token) and its live polling latency. With D26 the host's
+   token is used, so a meeting organized by Jeremy or Lindsay must be tested
+   with Brett as a non-organizer participant.
+2. Caption reading from the Meet page: latency and accuracy for the wake phrase,
+   and reliable speaker names.
+3. ~~Headless Claude Code controls~~ — **mostly verified** in P3 (2026-10-05);
+   key helper deferred to Plan 1 (D25).
+4. Extension media: can the extension supply the tab's microphone (Snoop's
+   voice) and camera (the card) to Meet reliably; and how fast speech stops.
+   BlackHole fallback measured the same way.
+5. Google Chat app restricted to one space and three users.
+6. Own-voice exclusion (D30): how Meet labels the host's own captions, so
+   Snoop never reacts to itself.
+7. Two-Snoop detection (D32): another seat's "Snoop here" appears in captions
+   with that seat's name, fast enough for the stand-down rule.
 
-Verified 2026-10-05: Attendee supports Meet captions transcription and Google TTS
-output (source); Meet Media API is receive-only (Google docs); Attendee license
-is ELv2; registry-mcp has no read-only mode and honors `AGENT_C_HOME`;
-Serena has `read_only` and `excluded_tools` settings and its tool classes are as
-listed in §5.3.1; Pipecat (BSD-2), repomix (MIT) and Serena (GPL-3.0) were all
-pushed within the last 3 months.
+Verified 2026-10-05: Meet Media API is receive-only (Google docs); registry-mcp
+has no read-only mode and honors `AGENT_C_HOME`; Serena has `read_only` and
+`excluded_tools` settings and its tool classes are as listed in §5.3.1; Pipecat
+(BSD-2), repomix (MIT) and Serena (GPL-3.0) were all pushed within the last 3
+months. P3: sandbox controls hold with positive and negative controls; one SDK
+session carries context and serves the cached prefix (second answer 0.97 s).
 
-**Considered and not in v1** (2026-10-05 survey): faster-whisper, moonshine,
-WhisperLive, whisper.cpp (fallback B candidates); silero-vad (needs raw audio);
-claude-context (sends code to embedding/vector services by default); Vexa
-(Apache-2.0 Meet bot, but its speak endpoint returns 404 in v0.12 — watch for a
-v2 product path).
+**Considered and not in v1:** Attendee (self-hosted Meet bot; needs its own
+account and SAML sign-in — dropped by D26); faster-whisper, moonshine,
+WhisperLive, whisper.cpp (Whisper fallback candidates); silero-vad (needs raw
+audio); claude-context (sends code to embedding/vector services by default);
+Vexa (Apache-2.0 Meet bot, but its speak endpoint returned 404 in v0.12).
 
 ## 9. Testing and acceptance
 
 **Unit (fixtures):** wake matcher (variants; mid-sentence no-trigger); stop →
-muted → wake re-arm; room classifier (all-team, anonymous, dial-in, gmail,
-other-domain, API error → mixed); asker matcher (duplicates, renamed outsider);
-brain routing order; Chat poster refuses any non-configured space.
+muted → wake re-arm; own-seat caption lines dropped (D30); room classifier
+(all-team, anonymous, dial-in, gmail, other-domain, API error → mixed); asker
+matcher (duplicates, renamed outsider); "Snoop here" prefix on every spoken
+answer; Chat poster refuses any non-configured space; roster loader rejects a
+member outside `saasless.ai` and a duplicate email; the card text comes from the
+host's roster entry; D32 stand-down picks the lower-priority host and posts once.
 
-**Sandbox (each Mac):** 5.1 negative control; a prompt to write a file is
-refused; a registry-mcp write tool is refused and a before/after hash shows the
-real `~/.agent-c` unchanged; a planted fake key is blocked by the answer gate;
-Serena's exposed tool list equals the keep list exactly, and a config with one
-editing tool re-enabled makes the brain refuse to start (negative control);
-a planted fake key in the repo is caught before it reaches the repo map;
-as `snoop`, reading the owner's GitHub token or deploy key fails, and a prompt
-asking the brain to print its Anthropic key yields nothing (negative controls).
+**Extension:** manifest grants only `https://meet.google.com/*` and the
+localhost websocket (asserted by a test reading `manifest.json`); the localhost
+socket rejects a connection without the token; the extension has no code path
+that sends Meet chat (asserted by test).
 
-**Pre-loading (VM):** while the room is mixed, no transcript text leaves the VM
-(assert zero brain/model calls carrying caption text); a participant-check
-failure also pauses it; a planted phrase spoken in a rehearsal is absent from
-every file and log on the VM and Macs afterwards.
+**Sandbox:** 5.1 negative control (including the Chrome profile directory); a
+prompt to write a file is refused; a registry-mcp write tool is refused and a
+before/after hash shows the real `~/.agent-c` unchanged; a planted fake key is
+blocked by the answer gate; Serena's exposed tool list equals the keep list
+exactly, and a config with one editing tool re-enabled makes the brain refuse to
+start (negative control); a planted fake key in the repo is caught before it
+reaches the repo map; as `snoop`, reading the owner's GitHub token, Google
+credentials or deploy key fails, and a prompt asking the brain to print its
+Anthropic key yields nothing (negative controls).
 
-**End-to-end rehearsal** (test Meet, `agent-c@` + two team accounts):
+**Pre-loading:** while the room is mixed, no transcript text leaves the
+Conductor (assert zero brain/model calls carrying caption text); a
+participant-check failure also pauses it; a planted phrase spoken in a
+rehearsal is absent from every file and log on the Mac afterwards.
+
+**End-to-end rehearsal** (test Meet; Snoop in Brett's seat on Brett's Mac;
+Jeremy or Lindsay plus one more account; then repeated with Jeremy or Lindsay
+as host on their own Mac):
 - Acceptance questions from the 2026-10-05 standup, graded by Brett:
   - How many v1→v2 gaps are there, and how many are missing?
   - How does an accessibility-review workflow run in v2?
   - Where does multi-model support (Cursor, Gemini, OpenAI) stand?
   - What does a v2 run cost compared with Beast Mode?
+- The tile shows "Snoop (<host>)"; every answer starts "Snoop here".
+- Two hosts start Snoop in the same meeting: the lower-priority one stands down
+  and posts once to Chat; only one Snoop answers after the first answer.
 - A non-`saasless.ai` participant of each kind (gmail, other domain, anonymous,
   dial-in) joins mid-answer: speech stops; the remainder posts to Chat.
 - Any participant says "peanut butter": Snoop stays silent until "Yo Snoop";
@@ -392,3 +461,4 @@ every file and log on the VM and Macs afterwards.
 - Pacing: a long answer stops after 3 sentences and asks; "yes" yields a chunk
   of roughly 75 s that ends on a complete point; a focused reply redirects the
   next chunk; silence stops speech and the full answer is in Chat.
+- Snoop's own speech never triggers a wake or stop.

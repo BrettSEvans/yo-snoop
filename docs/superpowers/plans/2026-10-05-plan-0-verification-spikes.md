@@ -2,43 +2,49 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Prove or disprove the spec's unverified claims (§8) plus one integration risk the spec depends on, before any product code is written.
+> **Revised 2026-10-06** for the Chrome-profile approach (spec D26–D32). Tasks 1, 3, 4 are unchanged in substance (Task 4's Run B now tests Brett as a non-organizer). Attendee, the `agent-c@` account and SAML (old Tasks 2, 5, 7) are gone. New: Task 5 (extension skeleton, bridge, roster), Task 6 (caption reading), Task 7 (voice + card), Task 9 (own voice + two Snoops), Task 10 (close-out).
 
-**Architecture:** Each probe is a small, throwaway Python script under `spikes/` plus a manual procedure, producing a verdict (HOLDS / FAILS / PARTIAL) with pasted evidence in one findings file. Probes that need Google admin actions are performed by the owner (Brett); scripts only read and measure. A FAILS on Probe 1 or Probe 4 stops the program and returns to the spec.
+> **Revised 2026-10-09 (desk first):** Tasks 2 and 4–10 are the **Meet probes for Phase 1b** — run them after Desk Snoop (Plans 1–3) works. Task 3 (P3) is superseded by Plan 1 Task 7 Step 1 and Task 9, which re-run the sandbox controls through the SDK as `snoop` (see findings corrections).
 
-**Tech Stack:** Python 3.12 via `uv`; `google-api-python-client`, `google-auth-oauthlib`, `google-cloud-texttospeech`, `aiohttp`, `websockets`, `claude-agent-sdk`; Claude Code CLI 2.1.283 (installed); self-hosted Attendee (Docker); Google Workspace Admin console and Google Cloud console (UI — `gcloud` is not installed on this Mac).
+**Goal:** Prove or disprove the spec's unverified claims (§8) before any product code is written.
 
-**Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` (D1–D23). Read §3, §4, §5 and §8 before starting.
+**Architecture:** Each probe is small throwaway code under `spikes/` (Python) and `spikes/extension/` (a Manifest V3 Chrome extension) plus a manual procedure, producing a verdict (HOLDS / FAILS / PARTIAL) with pasted evidence in one findings file. Google admin actions and live meetings are done by the owner (Brett), with Jeremy or Lindsay for multi-person steps. A FAILS on P1 Run A, P2 caption reading, or P4 media (both extension and BlackHole) stops the program and returns to the spec.
 
-## Roadmap (this plan is 1 of 4)
+**Tech Stack:** Python 3.12 via `uv` (`aiohttp`, `google-api-python-client`, `google-auth-oauthlib`, `claude-agent-sdk`, later `sounddevice`); Chrome (installed) with an unpacked MV3 extension; Node 24 (`node --test`, `jsdom` dev dependency for caption-parser tests); macOS `say` for probe audio; BlackHole 2ch (only if Task 7 needs the fallback).
 
-| Plan | Scope | Written when |
+**Spec:** `docs/superpowers/specs/2026-10-05-yo-snoop-design.md` (D1–D32). Read §3, §4, §5 and §8 before starting.
+
+## Roadmap (revised 2026-10-09: desk first)
+
+| Plan | Scope | Phase |
 |---|---|---|
-| **0 (this)** | Verify §8 claims + audio-stop latency | now |
-| 1 | Mac brain: installer, `snoop` user + negative controls, owner refresher (clone, PR/CI file, repo map, `AGENT_C_HOME` bundle), Claude Code sandbox config, Serena lockdown, registry-mcp, answer gate, streaming brain server | after Plan 0 findings |
-| 2 | VM conductor: wake/stop/mute, room + asker checks, pacing chunker, pre-loading, brain routing, Pipecat pipeline, Attendee client, Chat poster | after Plan 0 findings |
-| 3 | Workspace production setup runbook + end-to-end rehearsal (spec §9) | after Plans 1–2 |
-
-Plans 1 and 2 are written from Plan 0's findings, not before: every §8 claim changes their code (which token the room check uses, which Claude Code flags exist, how audio is cut).
+| 1 | Brain (sandboxed, read-only) | 1a |
+| 2 | Desk Snoop (mic → Whisper → brain → `say`) | 1a |
+| 3 | Desk install runbook + desk rehearsal | 1a |
+| **0 (this)** | Meet probes (P1, P2, P4–P7) | 1b |
+| 4 | Meet seat (extension, Conductor, Chat) | 1b |
+| 5 | Meet install + rehearsal | 1b |
 
 ## Global Constraints
 
-- Internal tool for Brett, Jeremy, Lindsay only; never customer-facing (D1, §7).
-- Attendee never signs in as brett@ (or any human's account); the bot identity is agent-c@ only. brett@ may be used only as a read-only Meet organizer in P1 (D24).
+- Internal tool for roster members only (`config/team.json`); never customer-facing (D1, §7).
+- **Snoop never handles a Google password and never automates Google sign-in.** The host signs in to the "Snoop" Chrome profile themselves (D26).
+- The extension is loaded **only** in the "Snoop" Chrome profile, unpacked, never published; host permission `https://meet.google.com/*` only (D27).
+- The extension never sends Meet chat, email, or any keystroke/click into Meet except turning captions on (D17).
 - No secret is ever printed through a tool, committed, or pasted into findings. Compare secrets by sha256 prefix only. Key files live in `spikes/.secrets/` (gitignored) and are deleted at the end of Plan 0.
-- `agent-c@startup.ai` must never send email, use Meet in-meeting chat, or post anywhere but the one Chat space (D17). No probe calls Attendee's `send_chat_message` endpoint.
-- Every gate probe has a **negative control** (a case that must fail) and a **positive control** (a case that must succeed), and both are recorded. A probe whose negative control cannot fail is not evidence.
+- **No meeting text or real names are committed.** Caption DOM captures go to `/tmp` and are deleted the same day; any committed fixture is rewritten with test names and test sentences (Task 6 Step 3 checks this).
+- Every gate probe has a **negative control** (must fail) and a **positive control** (must succeed), both recorded.
 - Times in findings are Pacific (PDT), labeled.
-- Disk: this Mac had 46 GiB free on 2026-10-05. Check `df -h /System/Volumes/Data` before Docker work; stop if under 30 GiB. Prune Attendee images at the end (Task 8).
+- Disk: 31.9 GiB free on 2026-10-06. Stop if under 25 GiB.
 - Python 3.12 (not the system 3.14) — pinned in `pyproject.toml`.
 
 ## Review Focus
 
-1. **Brett's own sign-in hijacked by the bot's SSO profile** — if the legacy SAML profile is not truly OU-scoped, the Attendee signing key could sign in as brett@. Expected: brett@ and jeremy@ still get Google's password page. Pinned in Task 5, Step 6.
-2. **An anonymous joiner shows up late in the participant list** — if the Meet REST list lags, Snoop speaks to a room that already has an outsider. Expected: first appearance within the measured bound, recorded p90. Pinned in Task 4, Step 5.
-3. **"Peanut butter" cannot actually stop the audio fast** — Attendee may have already buffered seconds of speech. Expected: audio ends ≤ 1.0 s after we stop sending. Pinned in Task 7, Step 4.
-4. **Mid-sentence "snoop" triggers the bot** — decoy phrases must not match. Expected: 0 of 10 decoys trigger. Pinned in Task 6, Step 5.
-5. **A denied Claude Code tool silently runs anyway** — the harness must detect a write that happened. Expected: positive control proves detection works; write and network prompts leave no trace. Pinned in Task 3, Steps 3–4.
+1. **Any local process drives Snoop's voice** — the localhost bridge must reject a connection without the token, or anything on the Mac could speak in a meeting as Brett. Pinned in Task 5, Step 2.
+2. **Meet ignores the injected mic and uses the real one** — Snoop would be silent and the room would hear Brett's laptop mic. Expected: others hear `say` audio, not room noise. Pinned in Task 7, Step 4.
+3. **Snoop reacts to its own voice** — its own speech must never trigger wake or stop. Pinned in Task 9, Steps 1–4.
+4. **Real meeting text lands in the repo** — the caption fixture must contain only test strings. Pinned in Task 6, Step 3.
+5. **A non-organizer host cannot read participants** — then Snoop hosted by anyone but the organizer is Chat-only. Expected: recorded, not assumed. Pinned in Task 4, Step 6.
 
 ---
 
@@ -175,26 +181,25 @@ git commit -m "spikes: scaffold, secret hygiene, findings template"
 
 ---
 
-### Task 2: Owner setup — Workspace and Google Cloud prerequisites (manual, Brett)
+### Task 2: Owner setup — Cloud project, Google Group, Snoop Chrome profile (manual, Brett)
 
-These are admin-console actions. The executor guides; Brett clicks. Nothing here is scripted because it needs super-admin rights.
+No new Google account and no new seat (D26). Admin console and Cloud console are clicked by Brett; the executor guides.
 
 **Files:**
 - Modify: `docs/superpowers/findings/2026-10-plan-0-findings.md` (append "Setup log")
 
 **Interfaces:**
-- Produces: OU `/Snoop Bot`; user `agent-c@startup.ai` (non-admin, in `/Snoop Bot`); Google Cloud project `yo-snoop` with Meet REST API, Google Chat API, People API, Cloud Text-to-Speech API enabled; OAuth consent screen **Internal**; one OAuth client of type **Desktop**, downloaded to `spikes/.secrets/client_secret.json`.
+- Produces: Google Cloud project `yo-snoop` with Meet REST API, Google Chat API, People API, Cloud Text-to-Speech API enabled; OAuth consent **Internal**; a **Desktop** OAuth client at `spikes/.secrets/client_secret.json`; Google Group `snoop-team@startup.ai` with brett@, jeremy@, lindsay@; Chrome profile **"Snoop"** signed in as brett@ by Brett.
 
-- [ ] **Step 1: Create the OU and user** — Admin console → Directory → Organizational units → create `Snoop Bot`. Users → add `agent-c@startup.ai`, first name `Snoop`, OU `Snoop Bot`, **no admin role**.
-- [ ] **Step 2: Turn off services for the OU** — Apps → Google Workspace: for OU `Snoop Bot` set **Gmail, Drive and Docs** OFF. Leave Meet, Chat, Calendar ON. Calendar → sharing settings for the OU: external sharing off. (Calendar RSVP behavior is handled in Plan 2 by never calling RSVP APIs.)
-- [ ] **Step 3: Complete the bot's first sign-in** — in a private window sign in as `agent-c@`, finish the "Welcome to Google Workspace" flow, set language to English (United States) at `myaccount.google.com/personal-info` (Attendee requires both).
-- [ ] **Step 4: Create the Cloud project** — console.cloud.google.com → new project `yo-snoop` under the saasless.ai organization. Enable: Google Meet REST API, Google Chat API, People API, Cloud Text-to-Speech API. OAuth consent screen: **Internal**. Credentials → OAuth client ID → Desktop app → download JSON to `~/Code/Saasless/yo-snoop/spikes/.secrets/client_secret.json`.
-- [ ] **Step 5: Verify without printing secrets**
+- [ ] **Step 1: Cloud project** — console.cloud.google.com → new project `yo-snoop` under the saasless.ai organization. Enable: Google Meet REST API, Google Chat API, People API, Cloud Text-to-Speech API. OAuth consent screen: **Internal**. Credentials → OAuth client ID → Desktop app → download JSON to `~/Code/Saasless/yo-snoop/spikes/.secrets/client_secret.json`.
+- [ ] **Step 2: Google Group** — Admin console → Directory → Groups → create `snoop-team@startup.ai`, members brett@, jeremy@, lindsay@. Access: members only; no external members.
+- [ ] **Step 3: Snoop Chrome profile** — Chrome → profile menu → Add → "Snoop" → sign in as brett@ (Brett types his own password; nothing records it). Turn off Chrome sync for this profile's passwords and autofill. This profile is used only for Snoop meetings.
+- [ ] **Step 4: Verify without printing secrets**
 
 Run: `ls -l ~/Code/Saasless/yo-snoop/spikes/.secrets/ && git -C ~/Code/Saasless/yo-snoop status --porcelain spikes/.secrets`
-Expected: `client_secret.json` listed; the `git status` line prints nothing (ignored).
+Expected: `client_secret.json` listed; `git status` prints nothing (ignored).
 
-- [ ] **Step 6: Record and commit** — append to findings under `## Setup log`: date/time (PDT), each item done, by whom. No IDs that are secrets (project ID is fine).
+- [ ] **Step 5: Record and commit** — append to findings under `## Setup log`: date/time (PDT), each item done, by whom.
 
 ```bash
 git add docs/superpowers/findings/2026-10-plan-0-findings.md
@@ -344,7 +349,9 @@ asyncio.run(main())
 Run: `uv run python -m spikes.p3_session_probe; rc=$?; echo "rc=$rc"`
 Expected: `rc=0`; q2's text contains `4182`; q2 `usage` shows `cache_read_input_tokens` > 0. Record both latencies. If the Step 1 signature differs from these names, adapt to the PRESENT names and note it.
 
-- [ ] **Step 6: API key helper probe (Brett stores the key; never printed)**
+- [ ] **Step 6: API key helper probe — DEFERRED to Plan 1 (D25, 2026-10-05).** Development runs on the owner's subscription; the key helper only matters for the production API key. Kept below for Plan 1 to reuse.
+
+  *(Original step text:)* **API key helper probe (Brett stores the key; never printed)**
 
 Brett creates a Console workspace `Snoop` with a monthly spend limit and an API key in it, then stores it through `security`'s interactive shell, so the key never appears in a process list or shell history (a command line containing a key *is* the key; and the plain `-w` prompt truncates long keys at 128 characters):
 
@@ -495,19 +502,19 @@ if __name__ == "__main__":
 Run: `uv run pytest spikes/test_p1_classify.py -v`
 Expected: 4 PASS
 
-- [ ] **Step 5: Live run A — as organizer (brett@)**
+- [ ] **Step 5: Live run A — Brett is the organizer**
 
-Brett creates a Meet from brett@ calendar. Start: `uv run python -m spikes.p1_meet_participants --code <code> --as brett`. Sign in via the browser that opens as brett@. Then, noting the clock (PDT) at each click:
-1. Join from a **private window, not signed in** (anonymous). 2. Join from jeremy@ or lindsay@ (or a second saasless account). 3. Dial in by phone if available. 4. Leave each.
+Brett creates a Meet from his brett@ calendar. Start: `uv run python -m spikes.p1_meet_participants --code <code> --as brett`. Sign in via the browser that opens as brett@ (read-only Meet + directory scopes only). Then, noting the clock (PDT) at each click:
+1. Join from a **private window, not signed in** (anonymous). 2. Join from jeremy@ or lindsay@. 3. Dial in by phone if available. 4. Leave each.
 
-Expected per event: a line with the right `kind`; for saasless users an `@startup.ai` email; time from click to line recorded. **Compute p50/p90 join-to-appearance across ≥ 5 joins.** Pass bar for HOLDS: anonymous joiner appears within 10 s p90 (Plan 2 adds Attendee's instant join webhook as a trigger, so this bounds the worst case).
+Expected per event: a line with the right `kind`; for saasless users an `@startup.ai` email; time from click to line recorded. **Compute p50/p90 join-to-appearance across ≥ 5 joins.** Pass bar for HOLDS: anonymous joiner appears within 10 s p90.
 
-- [ ] **Step 6: Live run B — as the bot (agent-c@), not the organizer**
+- [ ] **Step 6: Live run B — Brett is a participant, not the organizer**
 
-Same meeting; delete nothing; run `--as agentc` and sign in as agent-c@ (the bot account must be **in** the meeting — join it from a private window as agent-c@).
-Expected (record whichever happens): participants listed → the bot can be its own principal; `LIST-ERROR`/empty → organizer token required. **Spec D24 makes this decisive:** meetings may be organized by Brett, Jeremy or Lindsay, so an organizer-only answer means Plan 2 holds a read-only `meetings.space.readonly` token for each of the three, and a meeting organized by anyone else cannot be room-checked (Snoop would treat it as mixed). Repeat Run A with Jeremy or Lindsay as organizer if they are available, to confirm the result is not specific to Brett. Also record whether `email_for` resolves emails as agent-c@ (directory sharing) or errors.
+Jeremy or Lindsay creates a Meet from their own calendar and invites brett@. Brett joins it (in the Snoop Chrome profile from Task 2), then runs `uv run python -m spikes.p1_meet_participants --code <code> --as brett` with the same token.
+Expected (record whichever happens): participants listed → **any host's own read-only token works for any meeting they attend** (D13/D24 satisfied); `LIST-ERROR`/empty → only the organizer's token can read the list, so Snoop hosted by a non-organizer would treat every such meeting as mixed (Chat-only) — record it; it changes Plan 2's room check (host must be organizer, or organizer shares a read-only token). If Jeremy or Lindsay can, repeat Run A with them as organizer running the probe on their own token.
 
-- [ ] **Step 7: Verdict and commit** — P1 HOLDS if a principal Plan 2 can hold on the VM sees live participants with kind + resolvable saasless identity within the bar. Record which principal. FAILS → stop; return to spec owner.
+- [ ] **Step 7: Verdict and commit** — P1 HOLDS if the host's own read-only token sees live participants with kind + resolvable saasless identity within the bar in Run A, and Run B's result is recorded. FAILS → stop; return to spec owner.
 
 ```bash
 git add spikes/p1_meet_participants.py spikes/test_p1_classify.py docs/superpowers/findings/2026-10-plan-0-findings.md
@@ -516,355 +523,780 @@ git commit -m "spikes: P1 Meet participants principal and latency"
 
 ---
 
-### Task 5: Probe P4 — Attendee SAML sign-in, OU-scoped, with negative control (§8.4)
+### Task 5: Extension skeleton, localhost bridge, roster (code only — no meeting needed)
 
 **Files:**
-- Create: `spikes/p4_attendee/docker-compose.override.yml` (only if needed for hostname)
-- Modify: findings (P4 row + evidence)
+- Create: `spikes/roster.py`, `spikes/test_roster.py`
+- Create: `spikes/bridge_server.py`, `spikes/test_bridge_server.py`
+- Create: `spikes/make_ext_config.py`
+- Create: `spikes/extension/manifest.json`, `spikes/extension/bridge_sw.js`, `spikes/extension/content.js`, `spikes/extension/page_media.js`
+- Create: `spikes/test_extension_manifest.py`
+- Modify: `.gitignore` (add `spikes/extension/config.local.json`)
 
 **Interfaces:**
-- Produces: a running self-hosted Attendee instance with a Google Meet bot login group `snoop` for agent-c@, reused by Tasks 6 and 7. Attendee API token stored in `spikes/.secrets/attendee-token` (mode 600).
+- Consumes: `config/team.json` (D31); `spikes.common.SECRETS_DIR`, `pdt_now`
+- Produces:
+  - `spikes.roster.load(path: str | Path) -> Roster`; `Roster.members: tuple[Member, ...]`; `Roster.by_email(email) -> Member | None`; `Roster.by_display_name(name) -> list[Member]`; `Member(email, display_name, host_priority, may_host, mixed_room_asker)`. Raises `ValueError` on bad roster.
+  - `spikes.bridge_server.make_app(token: str, on_message: Callable[[dict], None]) -> aiohttp.web.Application` serving websocket `/snoop`; first client message must be `{"type": "hello", "token": <token>}` within 5 s, else close code **4401**; on success the server sends `{"type": "ack"}`. `app["clients"]: set` of live sockets for sending `{"type": "audio"|"stop"|"card"|"dump"}` messages.
+  - Extension message protocol: page → server `{"type": "caption", "speaker": str, "text": str, "ts": float}` and `{"type": "dump", "html": str}`; server → page `{"type": "audio", "pcm_b64": str, "rate": int}`, `{"type": "stop"}`, `{"type": "card", "text": str}`, `{"type": "dump"}`.
 
-- [ ] **Step 1: Disk and Docker check**
+- [ ] **Step 1: Roster — failing tests**
 
-Run: `df -h /System/Volumes/Data | tail -1; docker info --format '{{.ServerVersion}}'`
-Expected: ≥ 30 GiB free and a server version. If Docker prints nothing, start Docker Desktop first.
+```python
+# spikes/test_roster.py
+import json, pytest
+from spikes.roster import load
 
-- [ ] **Step 2: Run Attendee self-hosted, pinned**
+def write(tmp_path, members, domain="startup.ai"):
+    p = tmp_path / "team.json"
+    p.write_text(json.dumps({"domain": domain, "google_group": "snoop-team@startup.ai", "members": members}))
+    return p
 
-```bash
-cd ~/Code/Saasless/yo-snoop/spikes && git clone https://github.com/attendee-labs/attendee.git p4_attendee/src
-cd p4_attendee/src && git rev-parse HEAD
+def m(email, name, prio):
+    return {"email": email, "display_name": name, "host_priority": prio, "may_host": True, "mixed_room_asker": True}
+
+def test_repo_roster_loads():
+    r = load("config/team.json")
+    assert [x.email for x in r.members] == ["brett@startup.ai", "jeremy@startup.ai", "lindsay@startup.ai"]
+    assert r.by_email("jeremy@startup.ai").display_name == "Jeremy Leeds"
+
+def test_rejects_outside_domain(tmp_path):
+    with pytest.raises(ValueError, match="domain"):
+        load(write(tmp_path, [m("x@gmail.com", "X", 1)]))
+
+def test_rejects_duplicate_email(tmp_path):
+    with pytest.raises(ValueError, match="duplicate email"):
+        load(write(tmp_path, [m("a@startup.ai", "A", 1), m("a@startup.ai", "B", 2)]))
+
+def test_rejects_duplicate_priority(tmp_path):
+    with pytest.raises(ValueError, match="duplicate host_priority"):
+        load(write(tmp_path, [m("a@startup.ai", "A", 1), m("b@startup.ai", "B", 1)]))
+
+def test_rejects_duplicate_display_name(tmp_path):
+    with pytest.raises(ValueError, match="duplicate display_name"):
+        load(write(tmp_path, [m("a@startup.ai", "Sam", 1), m("b@startup.ai", "Sam", 2)]))
 ```
 
-Record the commit SHA in findings (this is the version Plan 2 pins). Follow its README "Running in development mode" section exactly; create an account and API key in the local UI; save the token: `pbpaste > ../../.secrets/attendee-token && chmod 600 ../../.secrets/attendee-token && pbcopy < /dev/null`.
+Run: `uv run pytest spikes/test_roster.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'spikes.roster'`
 
-**Hostname note:** Google redirects the bot's browser (inside Attendee's container) to the SSO sign-in URL. If `localhost` does not resolve from inside the container, stop and record "needs reachable HTTPS hostname"; Plan 2 then runs this on the VM behind TLS. Do not expose the Mac to the internet to work around it.
+- [ ] **Step 2: Roster — implement, then green**
 
-- [ ] **Step 3: Create the signing key and cert (Brett)**
+```python
+# spikes/roster.py
+import json
+from dataclasses import dataclass
+from pathlib import Path
 
-```bash
-cd ~/Code/Saasless/yo-snoop/spikes/.secrets && openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -sha256 -days 3650 -nodes -subj "/CN=snoop-bot-sso" && chmod 600 key.pem
+
+@dataclass(frozen=True)
+class Member:
+    email: str
+    display_name: str
+    host_priority: int
+    may_host: bool
+    mixed_room_asker: bool
+
+
+@dataclass(frozen=True)
+class Roster:
+    domain: str
+    google_group: str
+    members: tuple[Member, ...]
+
+    def by_email(self, email: str) -> Member | None:
+        return next((x for x in self.members if x.email == email.lower()), None)
+
+    def by_display_name(self, name: str) -> list[Member]:
+        return [x for x in self.members if x.display_name == name]
+
+
+def _dupes(values):
+    seen, dup = set(), set()
+    for v in values:
+        (dup if v in seen else seen).add(v)
+    return dup
+
+
+def load(path) -> Roster:
+    raw = json.loads(Path(path).read_text())
+    domain = raw["domain"].lower()
+    members = tuple(Member(email=x["email"].lower(), display_name=x["display_name"],
+                           host_priority=int(x["host_priority"]), may_host=bool(x["may_host"]),
+                           mixed_room_asker=bool(x["mixed_room_asker"])) for x in raw["members"])
+    for x in members:
+        if not x.email.endswith("@" + domain):
+            raise ValueError(f"member outside domain {domain}: {x.email}")
+    for field, label in (("email", "email"), ("host_priority", "host_priority"), ("display_name", "display_name")):
+        d = _dupes(getattr(x, field) for x in members)
+        if d:
+            raise ValueError(f"duplicate {label}: {sorted(map(str, d))}")
+    return Roster(domain=domain, google_group=raw["google_group"], members=members)
 ```
 
-- [ ] **Step 4: Legacy SSO profile (Brett, Admin console)** — Security → Authentication → SSO with third-party IdP → Add SAML profile → "Legacy SSO profile": enable; Sign-in URL `https://<attendee-host>/bot_sso/google_meet_sign_in`; Sign-out URL `https://<attendee-host>/bot_sso/google_meet_sign_out`; domain-specific issuer **Yes**; upload `cert.pem`. Save.
+Run: `uv run pytest spikes/test_roster.py -v`
+Expected: 5 PASS
 
-- [ ] **Step 5: Assign the profile to OU `Snoop Bot` ONLY** — Manage SSO profile assignments → select OU `Snoop Bot` → legacy profile. **Confirm the root OU and every other OU still show "None".** Screenshot that page (no secrets on it) into findings.
+- [ ] **Step 3: Bridge server — failing tests (token is the gate)**
 
-- [ ] **Step 6: Negative control — the profile must not touch anyone else**
+```python
+# spikes/test_bridge_server.py
+import asyncio
+from aiohttp import WSMsgType
+from aiohttp.test_utils import TestServer, TestClient
+from spikes.bridge_server import make_app
 
-In a fresh private window, start sign-in as **brett@startup.ai** at accounts.google.com.
-Expected: Google's own password page. **If the browser is redirected to the Attendee URL, STOP: P4 FAILS.** Immediately set the assignment back to None and record it. Repeat for jeremy@ or lindsay@.
+TOKEN = "t-123"
 
-- [ ] **Step 7: Positive control — the bot signs in**
+async def _client(app):
+    c = TestClient(TestServer(app)); await c.start_server(); return c
 
-In the Attendee UI: Settings → Bot Logins → Google Meet → create group `snoop`, add login (email agent-c@startup.ai, upload key.pem and cert.pem). Create a bot via API into a test meeting with `"google_meet_settings": {"use_login": true, "login_group_name": "snoop"}`:
+def test_rejects_connection_without_hello():
+    async def go():
+        c = await _client(make_app(TOKEN, lambda m: None, hello_timeout=0.2))
+        ws = await c.ws_connect("/snoop")
+        msg = await ws.receive()
+        await c.close()
+        return msg, ws.close_code
+    msg, code = asyncio.run(go())
+    assert msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING) and code == 4401
 
-The token goes in a header file written by the `printf` builtin, so it never appears in any process's arguments:
+def test_rejects_wrong_token():
+    async def go():
+        c = await _client(make_app(TOKEN, lambda m: None))
+        ws = await c.ws_connect("/snoop")
+        await ws.send_json({"type": "hello", "token": "wrong"})
+        await ws.receive()
+        code = ws.close_code
+        await c.close()
+        return code
+    assert asyncio.run(go()) == 4401
 
-```bash
-cd ~/Code/Saasless/yo-snoop/spikes/.secrets && printf 'Authorization: Token %s\n' "$(cat attendee-token)" > attendee-header && chmod 600 attendee-header
+def test_accepts_right_token_and_forwards_messages():
+    got = []
+    async def go():
+        c = await _client(make_app(TOKEN, got.append))
+        ws = await c.ws_connect("/snoop")
+        await ws.send_json({"type": "hello", "token": TOKEN})
+        ack = await ws.receive_json()
+        await ws.send_json({"type": "caption", "speaker": "Test A", "text": "hello", "ts": 1.0})
+        await asyncio.sleep(0.05)
+        await ws.close(); await c.close()
+        return ack
+    assert asyncio.run(go()) == {"type": "ack"}
+    assert got == [{"type": "caption", "speaker": "Test A", "text": "hello", "ts": 1.0}]
 ```
 
-```bash
-curl -s -X POST http://localhost:8000/api/v1/bots -H @$HOME/Code/Saasless/yo-snoop/spikes/.secrets/attendee-header -H 'Content-Type: application/json' -d '{"meeting_url":"https://meet.google.com/<code>","bot_name":"Snoop","google_meet_settings":{"use_login":true,"login_group_name":"snoop"}}' | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("id"), d.get("state"))'
+Run: `uv run pytest spikes/test_bridge_server.py -v`
+Expected: FAIL with `ModuleNotFoundError: No module named 'spikes.bridge_server'`
+
+- [ ] **Step 4: Bridge server — implement, then green**
+
+```python
+# spikes/bridge_server.py
+"""Localhost websocket between the Snoop extension and Snoop's Python side.
+Binds 127.0.0.1 only. First message must be a hello carrying the per-install token."""
+import asyncio, hmac
+from typing import Callable
+from aiohttp import web, WSMsgType
+
+
+def make_app(token: str, on_message: Callable[[dict], None], hello_timeout: float = 5.0) -> web.Application:
+    app = web.Application()
+    app["clients"] = set()
+
+    async def snoop(request: web.Request) -> web.WebSocketResponse:
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        try:
+            first = await asyncio.wait_for(ws.receive_json(), timeout=hello_timeout)
+        except Exception:
+            await ws.close(code=4401, message=b"hello required"); return ws
+        if first.get("type") != "hello" or not hmac.compare_digest(str(first.get("token", "")), token):
+            await ws.close(code=4401, message=b"bad token"); return ws
+        await ws.send_json({"type": "ack"})
+        app["clients"].add(ws)
+        try:
+            async for msg in ws:
+                if msg.type == WSMsgType.TEXT:
+                    on_message(msg.json())
+        finally:
+            app["clients"].discard(ws)
+        return ws
+
+    app.router.add_get("/snoop", snoop)
+    return app
+
+
+async def broadcast(app: web.Application, message: dict) -> None:
+    for ws in list(app["clients"]):
+        await ws.send_json(message)
 ```
 
-Expected: bot joins showing as "Snoop" (not "Unverified"/anonymous). Never add `-v` to curl (it prints headers). Tasks 6 and 7 create bots the same way with `-H @…/attendee-header`.
+Run: `uv run pytest spikes/test_bridge_server.py -v`
+Expected: 3 PASS
 
-- [ ] **Step 8: Verdict, alternative, commit** — HOLDS only if Step 6 negative passed for two non-bot users AND Step 7 positive passed. Record also, as an owner decision for Plan 2: Attendee's docs recommend a **separate** Workspace for the bot (subdomain), which removes the "key signs in as Brett" risk entirely rather than scoping it.
+- [ ] **Step 5: Extension manifest — failing test (least privilege)**
+
+```python
+# spikes/test_extension_manifest.py
+import json, pathlib, re
+
+EXT = pathlib.Path("spikes/extension")
+
+def manifest():
+    return json.loads((EXT / "manifest.json").read_text())
+
+def test_only_meet_host_permission():
+    m = manifest()
+    assert m["manifest_version"] == 3
+    assert m["host_permissions"] == ["https://meet.google.com/*"]
+    assert m.get("permissions", []) == []
+    assert "externally_connectable" not in m and "optional_permissions" not in m
+    for cs in m["content_scripts"]:
+        assert cs["matches"] == ["https://meet.google.com/*"]
+
+def test_no_input_or_chat_code_paths():
+    banned = [r"\.value\s*=", r"dispatchEvent\(", r"KeyboardEvent", r"InputEvent", r"chat", r"sendKeys"]
+    for js in EXT.glob("*.js"):
+        src = js.read_text()
+        for pat in banned:
+            assert not re.search(pat, src, re.IGNORECASE), f"{js.name} matches {pat}"
+        clicks = re.findall(r"\.click\(\)", src)
+        assert len(clicks) <= 1 and (not clicks or "function turnOnCaptions" in src), f"{js.name} clicks outside turnOnCaptions"
+
+def test_local_config_is_ignored():
+    import subprocess
+    p = EXT / "config.local.json"
+    p.write_text("{}")
+    try:
+        assert subprocess.run(["git", "check-ignore", "-q", str(p)]).returncode == 0
+    finally:
+        p.unlink()
+```
+
+Run: `uv run pytest spikes/test_extension_manifest.py -v`
+Expected: FAIL (`FileNotFoundError` for `manifest.json`)
+
+- [ ] **Step 6: Extension files — write, then green**
+
+`.gitignore` gains the line `spikes/extension/config.local.json`.
+
+```json
+// spikes/extension/manifest.json
+{
+  "manifest_version": 3,
+  "name": "Snoop (spike)",
+  "version": "0.0.1",
+  "description": "Internal Saasless spike. Meet captions out; Snoop voice and card in.",
+  "host_permissions": ["https://meet.google.com/*"],
+  "background": {"service_worker": "bridge_sw.js"},
+  "content_scripts": [
+    {"matches": ["https://meet.google.com/*"], "js": ["page_media.js"], "world": "MAIN", "run_at": "document_start"},
+    {"matches": ["https://meet.google.com/*"], "js": ["content.js"], "run_at": "document_idle"}
+  ]
+}
+```
+
+(The `//` line above is a label in this plan, not part of the file — the file must be valid JSON.)
+
+```js
+// spikes/extension/bridge_sw.js — holds the localhost websocket; relays to/from the Meet tab.
+let ws = null, port = null, cfg = null;
+
+async function config() {
+  if (!cfg) cfg = await (await fetch(chrome.runtime.getURL("config.local.json"))).json();
+  return cfg;
+}
+
+async function connect() {
+  const c = await config();
+  ws = new WebSocket(`ws://127.0.0.1:${c.port}/snoop`);
+  ws.onopen = () => ws.send(JSON.stringify({type: "hello", token: c.token}));
+  ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type !== "ack" && port) port.postMessage(m); };
+  ws.onclose = () => { ws = null; setTimeout(connect, 2000); };
+}
+
+chrome.runtime.onConnect.addListener((p) => {
+  if (p.name !== "snoop-meet") return;
+  port = p;
+  config().then((c) => p.postMessage({type: "card", text: `Snoop (${c.host_display_name})`}));
+  p.onMessage.addListener((m) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); });
+  p.onDisconnect.addListener(() => { port = null; });
+  if (!ws) connect();
+});
+```
+
+```js
+// spikes/extension/content.js — isolated world: relays between the service worker and page_media.js;
+// reads captions (selectors filled in by Task 6).
+const port = chrome.runtime.connect({name: "snoop-meet"});
+const TAG = "snoop-spike";
+
+port.onMessage.addListener((m) => {
+  if (m.type === "dump") { port.postMessage({type: "dump", html: captionRegionHTML()}); return; }
+  window.postMessage({tag: TAG, dir: "to-page", msg: m}, location.origin);
+});
+
+function captionRegionHTML() {
+  const el = document.querySelector('[role="region"][aria-label*="aption" i]') || document.querySelector("[aria-live]");
+  return el ? el.outerHTML : "NO-CAPTION-REGION";
+}
+
+// Task 6 replaces this with a parser built from a captured fixture.
+function emitCaption(speaker, text) {
+  port.postMessage({type: "caption", speaker, text, ts: Date.now() / 1000});
+}
+```
+
+```js
+// spikes/extension/page_media.js — MAIN world, document_start: supplies Snoop's mic and camera to Meet.
+(() => {
+  const TAG = "snoop-spike";
+  const ac = new AudioContext({sampleRate: 24000});
+  const dest = ac.createMediaStreamDestination();
+  let sources = [], playHead = 0, cardText = "Snoop";
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280; canvas.height = 720;
+  const g = canvas.getContext("2d");
+  function drawCard() {
+    g.fillStyle = "#111"; g.fillRect(0, 0, 1280, 720);
+    g.fillStyle = "#fff"; g.font = "bold 72px sans-serif"; g.textAlign = "center";
+    g.fillText(cardText, 640, 380);
+  }
+  drawCard(); setInterval(drawCard, 1000);
+  const cardTrack = canvas.captureStream(5).getVideoTracks()[0];
+
+  function playPcm(b64, rate) {
+    const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    const samples = new Int16Array(bytes.buffer);
+    const buf = ac.createBuffer(1, samples.length, rate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < samples.length; i++) ch[i] = samples[i] / 32768;
+    const src = ac.createBufferSource();
+    src.buffer = buf; src.connect(dest);
+    playHead = Math.max(playHead, ac.currentTime);
+    src.start(playHead); playHead += buf.duration;
+    sources.push(src); src.onended = () => { sources = sources.filter((s) => s !== src); };
+  }
+  function stopAll() { sources.forEach((s) => { try { s.stop(); } catch (e) {} }); sources = []; playHead = ac.currentTime; }
+
+  window.addEventListener("message", (e) => {
+    if (e.source !== window || e.data?.tag !== TAG || e.data.dir !== "to-page") return;
+    const m = e.data.msg;
+    if (m.type === "audio") { ac.resume(); playPcm(m.pcm_b64, m.rate); }
+    else if (m.type === "stop") stopAll();
+    else if (m.type === "card") cardText = m.text;
+  });
+
+  const real = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = async (constraints = {}) => {
+    const tracks = [];
+    if (constraints.audio) tracks.push(dest.stream.getAudioTracks()[0].clone());
+    if (constraints.video) tracks.push(cardTrack.clone());
+    if (!tracks.length) return real(constraints);
+    return new MediaStream(tracks);
+  };
+})();
+```
+
+```python
+# spikes/make_ext_config.py
+"""Write spikes/extension/config.local.json (gitignored) with a fresh token and the host's card name.
+Usage: uv run python -m spikes.make_ext_config --host brett@startup.ai [--port 8790]"""
+import argparse, json, secrets
+from pathlib import Path
+from spikes.common import SECRETS_DIR, sha_prefix
+from spikes.roster import load
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--host", required=True); ap.add_argument("--port", type=int, default=8790)
+    a = ap.parse_args()
+    member = load("config/team.json").by_email(a.host)
+    if member is None or not member.may_host:
+        raise SystemExit(f"{a.host} is not a roster member who may host")
+    token = secrets.token_urlsafe(32)
+    (SECRETS_DIR / "bridge-token").write_text(token); (SECRETS_DIR / "bridge-token").chmod(0o600)
+    p = Path("spikes/extension/config.local.json")
+    p.write_text(json.dumps({"port": a.port, "token": token, "host_display_name": member.display_name}))
+    p.chmod(0o600)
+    print("wrote config; token sha", sha_prefix(token), "card", f"Snoop ({member.display_name})")
+
+if __name__ == "__main__":
+    main()
+```
+
+Run: `uv run pytest spikes/test_extension_manifest.py -v`
+Expected: 3 PASS
+
+- [ ] **Step 7: Load the extension (Brett, no meeting needed)** — in the "Snoop" profile: `chrome://extensions` → Developer mode → Load unpacked → `~/Code/Saasless/yo-snoop/spikes/extension`. Run `uv run python -m spikes.make_ext_config --host brett@startup.ai` first. Expected: extension loads with no errors; its details page lists site access "meet.google.com" only.
+
+- [ ] **Step 8: Full suite and commit**
+
+Run: `uv run pytest -q`
+Expected: all pass (Task 1, 3–5 tests).
 
 ```bash
-git add docs/superpowers/findings/2026-10-plan-0-findings.md
-git commit -m "spikes: P4 Attendee SAML sign-in OU-scoped"
+git add .gitignore spikes/roster.py spikes/test_roster.py spikes/bridge_server.py spikes/test_bridge_server.py spikes/make_ext_config.py spikes/extension/manifest.json spikes/extension/bridge_sw.js spikes/extension/content.js spikes/extension/page_media.js spikes/test_extension_manifest.py
+git commit -m "spikes: extension skeleton, token-gated localhost bridge, roster loader"
 ```
 
 ---
 
-### Task 6: Probe P2 — caption latency, wake accuracy, speech events (§8.2)
+### Task 6: Probe P2 — reading Meet captions in the extension (§8.2)
 
 **Files:**
-- Create: `spikes/p2_wake.py`
-- Test: `spikes/test_p2_wake.py`
-- Create: `spikes/p2_receiver.py`
-- Create: `spikes/p2_script.txt`
-- Create: `spikes/p2_mark.py`
-- Modify: findings
+- Create: `spikes/p2_capture.py` (server that requests a caption-region dump and writes it to `/tmp`)
+- Create: `spikes/extension/caption_parse.js`, `spikes/extension/test/caption_parse.test.mjs`, `spikes/extension/test/fixture_captions.html`, `spikes/extension/package.json`
+- Create: `spikes/test_fixture_is_sanitized.py`
+- Create: `spikes/p2_listen.py` (logs caption events with receipt time)
+- Modify: `spikes/extension/content.js`, `spikes/extension/manifest.json` (add `caption_parse.js` before `content.js`)
+- Delete: `spikes/p2_receiver.py` (Attendee webhook receiver — obsolete)
+- Reuse: `spikes/p2_wake.py`, `spikes/test_p2_wake.py`, `spikes/p2_mark.py`, `spikes/p2_script.txt`
 
 **Interfaces:**
-- Consumes: Task 5's Attendee instance and bot login
-- Produces: `spikes.p2_wake.is_wake(text: str) -> bool` and `spikes.p2_wake.is_stop(text: str) -> bool` — first drafts of the matchers Plan 2 hardens.
+- Consumes: Task 5 bridge + extension
+- Produces: `parseCaptions(root: Element) -> Array<{speaker: string, text: string}>` (global in the content script; exported for Node tests via `module.exports` guard)
 
-- [ ] **Step 1: Write the failing test**
-
-```python
-# spikes/test_p2_wake.py
-import pytest
-from spikes.p2_wake import is_wake, is_stop
-
-@pytest.mark.parametrize("t", ["Yo Snoop, how many PRs merged?", "yo snoop what's CI",
-                               "You Snoop, status?", "Yo, Snoopy, any blockers?", "  yo snoop"])
-def test_wake_hits(t):
-    assert is_wake(t)
-
-@pytest.mark.parametrize("t", ["we should snoop around the logs", "yo can you snoop that",
-                               "Snoop Dogg is great", "I said yo snoop earlier", "snoop"])
-def test_wake_decoys(t):
-    assert not is_wake(t)
-
-@pytest.mark.parametrize("t", ["peanut butter", "Peanut butter!", "ok peanut butter please"])
-def test_stop_anywhere(t):
-    assert is_stop(t)
-
-def test_stop_not_partial():
-    assert not is_stop("peanut")
-```
-
-- [ ] **Step 2: Run to verify it fails**
-
-Run: `uv run pytest spikes/test_p2_wake.py -v`
-Expected: FAIL with `ModuleNotFoundError`
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Capture the caption DOM (Brett, live, alone in a test meeting)**
 
 ```python
-# spikes/p2_wake.py
-import re
-
-_WAKE = re.compile(r"^\W*(yo|you|yoh|yeah)\W+snoop(y|s)?\b", re.IGNORECASE)
-_STOP = re.compile(r"\bpeanut\W+butter\b", re.IGNORECASE)
-
-def is_wake(text: str) -> bool:
-    return bool(_WAKE.search(text))
-
-def is_stop(text: str) -> bool:
-    return bool(_STOP.search(text))
-```
-
-- [ ] **Step 4: Run tests**
-
-Run: `uv run pytest spikes/test_p2_wake.py -v`
-Expected: all PASS. (Note: "yo can you snoop that" must not match because `can` sits between `yo` and `snoop`.)
-
-- [ ] **Step 5: Live measurement**
-
-Receiver:
-
-```python
-# spikes/p2_receiver.py
-"""Log Attendee webhooks with PDT receipt time. Run: uv run python -m spikes.p2_receiver"""
-import json, time
+# spikes/p2_capture.py
+"""Ask the extension for the caption region's HTML and save it to /tmp (never the repo)."""
+import asyncio, json, time
 from aiohttp import web
-from spikes.common import pdt_now
-from spikes.p2_wake import is_wake
-
-LOG = open("/tmp/p2-events.ndjson", "a")
-
-async def hook(req):
-    body = await req.json()
-    rec = {"recv_epoch": time.time(), "recv_pdt": pdt_now(), "trigger": body.get("trigger"), "data": body.get("data")}
-    txt = json.dumps(body.get("data", {}))
-    rec["wake_in_text"] = is_wake(body.get("data", {}).get("transcription", {}).get("transcript", "") if isinstance(body.get("data"), dict) else "")
-    LOG.write(json.dumps(rec) + "\n"); LOG.flush()
-    print(rec["recv_pdt"], rec["trigger"], txt[:160])
-    return web.Response(text="ok")
-
-app = web.Application(); app.router.add_post("/hook", hook)
-web.run_app(app, port=8787)
-```
-
-Marker (speaker presses Enter at the end of each spoken line):
-
-```python
-# spikes/p2_mark.py
-import json, time
-lines = [l.strip() for l in open("spikes/p2_script.txt") if l.strip()]
-with open("/tmp/p2-marks.ndjson", "a") as out:
-    for l in lines:
-        input(f"SAY: {l}\n  (press Enter when you finish) ")
-        out.write(json.dumps({"line": l, "end_epoch": time.time()}) + "\n")
-```
-
-`spikes/p2_script.txt` — 20 wake lines then 10 decoys, interleaved in this order:
-
-```
-Yo Snoop, how many PRs merged yesterday?
-we should snoop around the logs later
-Yo Snoop, is CI green on main?
-Snoop Dogg had a new album out
-You Snoop, what's blocking the v2 epic?
-yo can you snoop that branch
-Yo Snoop, how many v1 to v2 gaps are missing?
-I said yo snoop earlier but never mind
-Yo, Snoopy, where is multi-model support?
-let's not snoop on Jeremy's branch
-Yo Snoop, what did the last run cost?
-snoop
-Yo Snoop, who opened the newest PR?
-the snoop thing is cool
-Yo Snoop, which stage is Foodious at?
-we could snoop the dashboard
-Yo Snoop, any open blockers?
-snooping is not a feature
-Yo Snoop, summarize today's merges.
-don't snoop
-Yo Snoop, how does the accessibility review run in v2?
-Yo Snoop, what changed in registry-mcp this week?
-Yo Snoop, is the AC-v2 branch ahead of main?
-Yo Snoop, how many backlog items moved yesterday?
-Yo Snoop, what's the newest commit on main?
-Yo Snoop, list open PRs.
-Yo Snoop, did the verify recipe pass?
-Yo Snoop, what's AGNTC-1252 about?
-Yo Snoop, what is D17 in the spec?
-Yo Snoop, peanut butter.
-```
-
-Configure an Attendee webhook (UI) to `http://host.docker.internal:8787/hook` with triggers `transcript.update` and `participant_events.speech_start_stop`. Create a bot with `"transcription_settings": {"meeting_closed_captions": {"google_meet_language": "en-US"}}` plus the login settings from Task 5. Run receiver and marker; read the script aloud.
-
-Compute per line: latency = first `transcript.update` containing the line's words − `end_epoch`; and `speech_stop` event − `end_epoch`. Pass bars: caption p90 ≤ 2.0 s; wake recall ≥ 18/20 on the 20 wake lines; **0/10 decoys trigger**; "peanut butter" detected on the last line.
-
-- [ ] **Step 6: Verdict and commit**
-
-```bash
-git add spikes/p2_*.py spikes/test_p2_wake.py spikes/p2_script.txt docs/superpowers/findings/2026-10-plan-0-findings.md
-git commit -m "spikes: P2 caption latency and wake accuracy"
-```
-
----
-
-### Task 7: Probe P6 — audio output and stop latency (unlisted risk behind D6)
-
-Not in spec §8, but D6 ("peanut butter" cuts audio ~1 s) depends on it: if Attendee buffers seconds of audio we've already sent, the stop is slow no matter what the Conductor does.
-
-**Files:**
-- Create: `spikes/p6_audio_stop.py`
-- Modify: findings
-
-**Interfaces:**
-- Consumes: Task 5 Attendee; Google TTS (Cloud project from Task 2, service account key at `spikes/.secrets/tts-key.json`)
-- Produces (findings): measured stop latency; whether Plan 2 must pace chunk sending to keep the buffer short.
-
-- [ ] **Step 1: Write the probe** — a websocket server that Attendee connects to (bot created with `websocket_settings.audio.url`), streams 20 s of Google TTS PCM at 16 kHz in 100 ms chunks, and stops sending at a keypress, logging the stop time.
-
-```python
-# spikes/p6_audio_stop.py
-"""Run, create a bot with websocket_settings.audio.url=ws://host.docker.internal:8788,
-press Enter while it talks; a listener on a second device notes when sound stops."""
-import asyncio, base64, json, os, sys, time
-import websockets
-from google.cloud import texttospeech
+from spikes.bridge_server import make_app, broadcast
 from spikes.common import SECRETS_DIR, pdt_now
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(SECRETS_DIR / "tts-key.json")
-TEXT = ("Aight, peep this. This is a long test paragraph so we can measure how fast "
-        "the audio stops. ") * 8
-RATE = 16000
-CHUNK = RATE * 2 // 10  # 100 ms of 16-bit mono
-
-def synth() -> bytes:
-    c = texttospeech.TextToSpeechClient()
-    r = c.synthesize_speech(input=texttospeech.SynthesisInput(text=TEXT),
-                            voice=texttospeech.VoiceSelectionParams(language_code="en-US"),
-                            audio_config=texttospeech.AudioConfig(
-                                audio_encoding=texttospeech.AudioEncoding.LINEAR16,
-                                sample_rate_hertz=RATE))
-    return r.audio_content[44:]  # strip WAV header
-
-async def handler(ws):
-    pcm = synth()
-    stop = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    loop.add_reader(sys.stdin, stop.set)
-    print("talking; press Enter to stop")
-    for i in range(0, len(pcm), CHUNK):
-        if stop.is_set():
-            print(pdt_now(), "STOP SENT at", time.time()); break
-        await ws.send(json.dumps({"trigger": "realtime_audio.bot_output",
-                                  "data": {"chunk": base64.b64encode(pcm[i:i+CHUNK]).decode(),
-                                           "sample_rate": RATE}}))
-        await asyncio.sleep(0.1)  # real-time pacing: never run ahead of playback
-    await asyncio.sleep(10)
+def on_message(m):
+    if m.get("type") == "dump":
+        path = f"/tmp/snoop-caption-dom-{int(time.time())}.html"
+        open(path, "w").write(m["html"])
+        print(pdt_now(), "saved", path, len(m["html"]), "chars")
 
 async def main():
-    async with websockets.serve(handler, "0.0.0.0", 8788):
-        await asyncio.Future()
+    app = make_app((SECRETS_DIR / "bridge-token").read_text(), on_message)
+    runner = web.AppRunner(app); await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", 8790).start()
+    print("speak a few lines with captions on, then press Enter to dump")
+    while True:
+        await asyncio.get_running_loop().run_in_executor(None, input)
+        await broadcast(app, {"type": "dump"})
 
 asyncio.run(main())
 ```
 
-- [ ] **Step 2: Paced run** — join the test meeting from a second device (phone) as a listener and screen-record it with audio. Run the probe, create the bot, press Enter ~8 s in.
-- [ ] **Step 3: Burst run** — change `await asyncio.sleep(0.1)` to `await asyncio.sleep(0)` (sends all audio immediately), rerun, press Enter at ~8 s of heard audio. Revert after.
-- [ ] **Step 4: Measure** — from the phone recording, time from the STOP SENT timestamp to silence, for both runs. Pass bar: paced run ≤ 1.0 s. The burst run shows how much Attendee buffers; if it plays to the end, Plan 2 **must** pace sends in real time (record this as a hard requirement).
-- [ ] **Step 5: Commit**
+Brett starts a test meeting in the Snoop profile, turns captions on (CC), runs `uv run python -m spikes.p2_capture`, says two lines, presses Enter. A second device (phone, as a guest or as Jeremy) says one line, Enter again.
+Expected: two `/tmp/snoop-caption-dom-*.html` files containing the spoken words and speaker names. If the file says `NO-CAPTION-REGION`, use Chrome DevTools on the Meet tab to find the caption container (search the Elements panel for a spoken word), update the selector in `captionRegionHTML()`, reload the extension, and retry. Record the selector in findings.
+
+- [ ] **Step 2: Build a sanitized fixture** — copy the captured structure to `spikes/extension/test/fixture_captions.html`, replacing every real name with `Test Speaker A` / `Test Speaker B` and every caption sentence with `yo snoop how many prs merged` / `we should snoop around the logs`. Keep the element structure, attributes and class names exactly. Delete the `/tmp` captures: `rm -f /tmp/snoop-caption-dom-*.html`.
+
+- [ ] **Step 3: Sanitization guard — failing test, then pass**
+
+```python
+# spikes/test_fixture_is_sanitized.py
+import json, pathlib
+
+def test_fixture_contains_no_roster_names_or_emails():
+    html = pathlib.Path("spikes/extension/test/fixture_captions.html").read_text()
+    team = json.loads(pathlib.Path("config/team.json").read_text())
+    for m in team["members"]:
+        for token in [m["email"], *m["display_name"].split()]:
+            assert token.lower() not in html.lower(), f"real identity in fixture: {token}"
+    assert "@" not in html
+```
+
+Run it before Step 2's edits are complete (with the raw capture copied in) and confirm it FAILS naming a real name; after sanitizing, it PASSES.
+
+- [ ] **Step 4: Parser — failing Node test**
+
+```json
+// spikes/extension/package.json
+{"name": "snoop-spike-extension", "private": true, "type": "module",
+ "scripts": {"test": "node --test test/"}, "devDependencies": {"jsdom": "^25.0.0"}}
+```
+
+```js
+// spikes/extension/test/caption_parse.test.mjs
+import {test} from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {JSDOM} from "jsdom";
+import {createRequire} from "node:module";
+const require = createRequire(import.meta.url);
+const {parseCaptions} = require("../caption_parse.js");
+
+test("parses speaker and text from the sanitized Meet fixture", () => {
+  const dom = new JSDOM(readFileSync(new URL("./fixture_captions.html", import.meta.url), "utf8"));
+  const lines = parseCaptions(dom.window.document.body);
+  assert.deepEqual(lines, [
+    {speaker: "Test Speaker A", text: "yo snoop how many prs merged"},
+    {speaker: "Test Speaker B", text: "we should snoop around the logs"},
+  ]);
+});
+```
+
+Add `spikes/extension/node_modules/` to `.gitignore` first (jsdom is a dev-only dependency).
+
+Run: `cd spikes/extension && npm install && npm test`
+Expected: FAIL (`Cannot find module '../caption_parse.js'`).
+
+- [ ] **Step 5: Parser — implement from the fixture's real structure, then green**
+
+Write `spikes/extension/caption_parse.js` defining `function parseCaptions(root)` using the selectors found in Step 1 (speaker-name element and text element inside each caption block), returning `[{speaker, text}]` in document order, trimming whitespace; end the file with:
+
+```js
+if (typeof module !== "undefined") module.exports = {parseCaptions};
+```
+
+The selectors are only known after Step 1; record them as constants at the top of the file (`const CAPTION_BLOCK = "...", SPEAKER = "...", TEXT = "...";`) and in findings.
+Run: `cd spikes/extension && npm test`
+Expected: 1 PASS.
+
+- [ ] **Step 6: Wire it live** — in `content.js`, add a `MutationObserver` on the caption region that calls `parseCaptions` and `emitCaption(speaker, text)` for each new or changed final line (de-duplicate by `speaker+text`). Add `caption_parse.js` before `content.js` in the manifest's isolated content script list; re-run `uv run pytest spikes/test_extension_manifest.py` (must stay green).
+
+```python
+# spikes/p2_listen.py
+"""Log caption events from the extension with receipt time and wake/stop flags."""
+import asyncio, json, time
+from aiohttp import web
+from spikes.bridge_server import make_app
+from spikes.common import SECRETS_DIR, pdt_now
+from spikes.p2_wake import is_wake, is_stop
+
+LOG = "/tmp/p2-events.ndjson"
+
+def on_message(m):
+    if m.get("type") != "caption":
+        return
+    rec = {"recv_epoch": time.time(), "speaker": m["speaker"], "text": m["text"],
+           "wake": is_wake(m["text"]), "stop": is_stop(m["text"])}
+    with open(LOG, "a") as f:
+        f.write(json.dumps(rec) + "\n")
+    print(pdt_now(), f"wake={rec['wake']} stop={rec['stop']}", m["speaker"], "|", m["text"][:100])
+
+async def main():
+    app = make_app((SECRETS_DIR / "bridge-token").read_text(), on_message)
+    runner = web.AppRunner(app); await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", 8790).start()
+    await asyncio.Future()
+
+asyncio.run(main())
+```
+
+- [ ] **Step 7: Live wake run (Brett + one other person)** — Snoop profile in the meeting with captions on; run `uv run python -m spikes.p2_listen`. The **other person** reads `spikes/p2_script.txt` while Brett runs `uv run python spikes/p2_mark.py` and presses Enter at the end of each line they say.
+Compute per line: latency = first caption event containing the line's words − `end_epoch`. Pass bars: caption p90 ≤ 2.0 s; wake recall ≥ 18/20; **0/10 decoys trigger**; "peanut butter" detected on the last line; speaker name equals the reader's Meet name on ≥ 29/30 lines. Afterwards: `rm -f /tmp/p2-events.ndjson /tmp/p2-marks.ndjson` once numbers are in findings.
+
+- [ ] **Step 8: Verdict and commit**
 
 ```bash
-git add spikes/p6_audio_stop.py docs/superpowers/findings/2026-10-plan-0-findings.md
-git commit -m "spikes: P6 audio stop latency"
+git rm spikes/p2_receiver.py
+git add spikes/p2_capture.py spikes/p2_listen.py spikes/test_fixture_is_sanitized.py spikes/extension docs/superpowers/findings/2026-10-plan-0-findings.md
+git commit -m "spikes: P2 caption reading in the extension"
 ```
 
 ---
 
-### Task 8: Probe P5 — Chat app limited to one space and three users (§8.5), then close out
+### Task 7: Probe P4 — Snoop's voice and card through the extension; BlackHole fallback (§8.4)
 
 **Files:**
-- Create: `spikes/p5_chat_post.py`
-- Modify: findings (P5 row, summary, cleanup log)
+- Create: `spikes/p4_media.py`
+- Delete: `spikes/p6_audio_stop.py` (Attendee websocket version — obsolete)
+- Modify (fallback only): `pyproject.toml` (add `sounddevice`)
 
 **Interfaces:**
-- Consumes: Task 2 Cloud project; a Chat-app service account key at `spikes/.secrets/chat-key.json`
-- Produces (findings): whether the app can be restricted to the three users, and the exact error when posting to a space it is not in.
+- Consumes: Task 5 bridge + `page_media.js`
+- Produces (findings): whether Meet uses the injected mic and camera; measured stop latency for the extension path and, if needed, BlackHole.
 
-- [ ] **Step 1: Configure the Chat app (Brett, Cloud console)** — Google Chat API → Configuration: name `Snoop`, avatar optional, no interactive features, **Visibility: make available to specific people** → brett@, jeremy@, lindsay@. Create a service account `snoop-chat`, download key to `spikes/.secrets/chat-key.json`, `chmod 600`. In Chat, create space `Snoop` with the three and add the app. Create a second space `Snoop-decoy` **without** the app.
-
-- [ ] **Step 2: Write the probe**
+- [ ] **Step 1: Write the media probe** — uses macOS `say` for audio so no Google key is needed.
 
 ```python
-# spikes/p5_chat_post.py
-"""Usage: uv run python -m spikes.p5_chat_post spaces/AAA spaces/BBB users/123"""
-import sys
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+# spikes/p4_media.py
+"""Speak a long `say` paragraph into the meeting through the extension; Enter sends stop.
+Fallback: --blackhole plays the same audio to the BlackHole device instead."""
+import argparse, asyncio, base64, subprocess, sys, time, wave, tempfile
+from aiohttp import web
+from spikes.bridge_server import make_app, broadcast
 from spikes.common import SECRETS_DIR, pdt_now
 
-creds = service_account.Credentials.from_service_account_file(
-    str(SECRETS_DIR / "chat-key.json"), scopes=["https://www.googleapis.com/auth/chat.bot"])
-chat = build("chat", "v1", credentials=creds)
+RATE = 24000
+TEXT = "Snoop here. Aight, peep this. This is a long test so we can time how fast the audio stops. " * 6
 
-def post(space: str, text: str):
-    try:
-        r = chat.spaces().messages().create(parent=space, body={"text": text}).execute()
-        return "OK", r.get("name")
-    except HttpError as e:
-        return f"HTTP {e.resp.status}", str(e)[:200]
+def pcm() -> bytes:
+    with tempfile.TemporaryDirectory() as d:
+        out = f"{d}/s.wav"
+        subprocess.run(["say", "-o", out, f"--data-format=LEI16@{RATE}", "--file-format=WAVE", TEXT], check=True)
+        with wave.open(out) as w:
+            return w.readframes(w.getnframes())
 
-good, decoy, user = sys.argv[1], sys.argv[2], sys.argv[3]
-print(pdt_now(), "positive", post(good, f"<{user}> P5 probe: Snoop can post here."))
-print(pdt_now(), "negative", post(decoy, "P5 probe: this must NOT post."))
+async def via_extension():
+    app = make_app((SECRETS_DIR / "bridge-token").read_text(), lambda m: None)
+    runner = web.AppRunner(app); await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", 8790).start()
+    input("extension connected and in the meeting? press Enter to start talking ")
+    data = pcm(); step = RATE * 2  # 1 s chunks
+    loop = asyncio.get_running_loop()
+    stop = loop.run_in_executor(None, input, "talking; press Enter to stop\n")
+    for i in range(0, len(data), step):
+        if stop.done():
+            break
+        await broadcast(app, {"type": "audio", "pcm_b64": base64.b64encode(data[i:i+step]).decode(), "rate": RATE})
+        await asyncio.sleep(0.9)  # stay ~0.1 s ahead of playback, never far ahead
+    await stop
+    await broadcast(app, {"type": "stop"})
+    print(pdt_now(), "STOP SENT", time.time())
+    await asyncio.sleep(5)
+
+def via_blackhole():
+    import numpy as np, sounddevice as sd
+    data = np.frombuffer(pcm(), dtype="<i2")
+    sd.play(data, RATE, device="BlackHole 2ch")
+    input("talking; press Enter to stop\n")
+    sd.stop(); print(pdt_now(), "STOP SENT", time.time())
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(); ap.add_argument("--blackhole", action="store_true")
+    a = ap.parse_args()
+    via_blackhole() if a.blackhole else asyncio.run(via_extension())
 ```
 
-- [ ] **Step 3: Run**
-
-Run: `uv run python -m spikes.p5_chat_post spaces/<snoop-space> spaces/<decoy-space> users/<brett-id>`
-Expected: `positive ('OK', ...)` and the message appears in `Snoop` with Brett @-mentioned; `negative ('HTTP 403' or 'HTTP 404', ...)` and nothing appears in `Snoop-decoy`. Also: a fourth saasless user (if one exists) searches for the app in Chat and cannot find it — record result or "no fourth user to test".
-
-- [ ] **Step 4: Summarize** — fill the findings table: every row has a verdict, evidence, and a "consequence for Plans 1–2" line. Add a final section `## Stop or go` stating: GO only if P1 and P4 HOLD; list every spec change the findings force (e.g., organizer-held Meet token, separate bot Workspace, paced audio sending).
-
-- [ ] **Step 5: Clean up**
+- [ ] **Step 2: Positive control — card and voice visible to others** — Brett joins a test meeting in the Snoop profile (the extension is active from page load); Jeremy or Lindsay joins from their own device. Run `uv run python -m spikes.p4_media`. Expected: the other person sees the **"Snoop (Brett Evans)"** card as Brett's video and hears the `say` voice.
+- [ ] **Step 3: Negative control — the real mic is not used** — while the probe is idle, Brett speaks near the laptop. Expected: the other person hears **nothing** from Brett's tile. If they hear Brett, Meet is bypassing the injected stream — record FAILS for the extension path and go to Step 6.
+- [ ] **Step 4: Stop latency** — the other person screen-records their device with audio. Brett presses Enter ~5 s into speech. From the recording, measure STOP SENT → silence. Pass bar: ≤ 1.0 s. Repeat 3 times; record each.
+- [ ] **Step 5: Device switch robustness** — in Meet's settings, change microphone and camera selection and back. Expected: Snoop's voice and card persist (Meet re-calls `getUserMedia`; the override must answer again). Record the result.
+- [ ] **Step 6: BlackHole fallback (only if Steps 2–4 fail)** — Brett installs BlackHole (`brew install --cask blackhole-2ch`, admin password typed by Brett), adds `sounddevice` and `numpy` with `uv add sounddevice numpy`, selects "BlackHole 2ch" as the microphone in the Snoop profile's Meet settings, and runs `uv run python -m spikes.p4_media --blackhole`. Repeat Steps 2–4 (card is unavailable on this path; record it).
+- [ ] **Step 7: Verdict and commit** — HOLDS if either path passes Steps 2–4; record which path Plan 2 uses (D29).
 
 ```bash
-cd ~/Code/Saasless/yo-snoop/spikes && rm -f .secrets/chat-key.json .secrets/tts-key.json .secrets/token-*.json && ls .secrets
-docker ps --format '{{.Names}}' | grep -i attendee
+git rm spikes/p6_audio_stop.py
+git add spikes/p4_media.py pyproject.toml uv.lock docs/superpowers/findings/2026-10-plan-0-findings.md
+git commit -m "spikes: P4 voice and card via extension (BlackHole fallback)"
+```
+
+---
+
+### Task 8: Probe P5 — Chat app limited to the team group and one space (§8.5)
+
+**Files:**
+- Reuse: `spikes/p5_chat_post.py` (written; credentials load inside `main()`)
+- Modify: findings (P5 row)
+
+**Interfaces:**
+- Consumes: Task 2 Cloud project and Google Group; a Chat-app service-account key at `spikes/.secrets/chat-key.json`
+- Produces (findings): whether visibility can be limited to the group, and the exact error when posting to a space the app is not in.
+
+- [ ] **Step 1: Configure the Chat app (Brett, Cloud console)** — Google Chat API → Configuration: name `Snoop`, no interactive features, **Visibility: specific people and groups → `snoop-team@startup.ai`**. Create service account `snoop-chat`, download key to `spikes/.secrets/chat-key.json`, `chmod 600`. In Chat, create space `Snoop`, add the group's members and the app. Create a second space `Snoop-decoy` **without** the app.
+- [ ] **Step 2: Run**
+
+Run: `uv run python -m spikes.p5_chat_post spaces/<snoop-space> spaces/<decoy-space> users/<brett-id>`
+Expected: `positive ('OK', ...)` and the message appears in `Snoop` with Brett @-mentioned; `negative ('HTTP 403' or 'HTTP 404', ...)` and nothing appears in `Snoop-decoy`. If a saasless user outside the group exists, they search for the app in Chat and cannot find it — record result or "no such user to test".
+- [ ] **Step 3: Commit**
+
+```bash
+git add docs/superpowers/findings/2026-10-plan-0-findings.md
+git commit -m "spikes: P5 Chat app scope"
+```
+
+---
+
+### Task 9: Probes P6 + P7 — own-voice exclusion and two-Snoop detection (§8.6, §8.7)
+
+**Files:**
+- Create: `spikes/p7_seats.py`, `spikes/test_p7_seats.py`
+- Modify: findings
+
+**Interfaces:**
+- Consumes: `spikes.roster` (Task 5); Task 6 live caption events; Task 7 media probe
+- Produces: `is_own_seat(speaker: str, own_label: str) -> bool`; `stand_down(my_email: str, speaker: str, text: str, roster: Roster) -> bool` — True when another roster member's seat says "Snoop here" and that member has a **lower** `host_priority` number than mine (higher priority).
+
+- [ ] **Step 1: Failing tests**
+
+```python
+# spikes/test_p7_seats.py
+from spikes.p7_seats import is_own_seat, stand_down
+from spikes.roster import load
+
+R = load("config/team.json")
+
+def test_own_seat_is_exact_label_only():
+    assert is_own_seat("You", "You")
+    assert not is_own_seat("Brett Evans", "You")  # the host on another device is a real participant
+
+def test_lower_priority_snoop_stands_down():
+    assert stand_down("jeremy@startup.ai", "Brett Evans", "Snoop here, CI is green", R)
+
+def test_higher_priority_snoop_stays():
+    assert not stand_down("brett@startup.ai", "Jeremy Leeds", "Snoop here, CI is green", R)
+
+def test_ordinary_speech_never_triggers_stand_down():
+    assert not stand_down("jeremy@startup.ai", "Brett Evans", "I think snoop here is fine", R)
+
+def test_non_roster_speaker_never_triggers_stand_down():
+    assert not stand_down("jeremy@startup.ai", "Some Guest", "Snoop here, hi", R)
+```
+
+Run: `uv run pytest spikes/test_p7_seats.py -v`
+Expected: FAIL with `ModuleNotFoundError`
+
+- [ ] **Step 2: Implement, then green**
+
+```python
+# spikes/p7_seats.py
+import re
+from spikes.roster import Roster
+
+_SNOOP_HERE = re.compile(r"^\W*snoop\W+here\b", re.IGNORECASE)
+
+def is_own_seat(speaker: str, own_label: str) -> bool:
+    return speaker == own_label
+
+def stand_down(my_email: str, speaker: str, text: str, roster: Roster) -> bool:
+    if not _SNOOP_HERE.search(text):
+        return False
+    me = roster.by_email(my_email)
+    others = roster.by_display_name(speaker)
+    if me is None or len(others) != 1:
+        return False
+    return others[0].host_priority < me.host_priority
+```
+
+Run: `uv run pytest spikes/test_p7_seats.py -v`
+Expected: 5 PASS
+
+- [ ] **Step 3: Live — own-voice label (Brett + one person)** — run `spikes.p2_listen` and `spikes.p4_media` together (both use port 8790: start `p2_listen` on 8790 and change `p4_media`'s port to 8791 with a second `make_ext_config` port only if they conflict — record what you did). Expected: caption events for Snoop's own `say` speech arrive with a speaker label; record the exact label (e.g. `You`). That label becomes `own_label`. Pass: every own-speech line carries that label and no other speaker's line does.
+- [ ] **Step 4: Live — another seat says "Snoop here"** — Jeremy or Lindsay says "Snoop here, testing" from their own seat. Expected: a caption event with their Meet display name and text starting "Snoop here"; `stand_down("brett@startup.ai", <name>, <text>, R)` is False for Brett (higher priority) and would be True if Brett's priority were lower — record the raw event.
+- [ ] **Step 5: Commit**
+
+```bash
+git add spikes/p7_seats.py spikes/test_p7_seats.py docs/superpowers/findings/2026-10-plan-0-findings.md
+git commit -m "spikes: P6/P7 own-voice label and two-Snoop detection"
+```
+
+---
+
+### Task 10: Close out — stop or go, clean up
+
+**Files:**
+- Modify: findings (summary + cleanup log)
+
+- [ ] **Step 1: Summarize** — every row in the findings table has a verdict, evidence and a "consequence for Plans 1–2" line (P1–P7). Add `## Stop or go`: **GO only if** P1 Run A HOLDS, P2 caption reading HOLDS, and P4 HOLDS on at least one path. List every spec change the findings force (e.g. organizer-only participant reads, BlackHole instead of injection, a different own-voice label).
+- [ ] **Step 2: Clean up**
+
+```bash
+cd ~/Code/Saasless/yo-snoop && rm -f spikes/.secrets/chat-key.json spikes/.secrets/token-*.json /tmp/snoop-caption-dom-*.html /tmp/p2-*.ndjson && ls spikes/.secrets
 df -h /System/Volumes/Data | tail -1
 ```
 
-Keep `key.pem`/`cert.pem`/`attendee-token` only if the owner chooses to reuse this Attendee instance for Plan 2 development; otherwise delete them and the Docker images (`docker compose down -v` in `p4_attendee/src`, then `docker image prune -f`). Revoke the deleted service-account keys in the Cloud console. Record what was kept and why.
+Revoke the deleted service-account key in the Cloud console. Keep `client_secret.json` and `bridge-token` only if Plan 2 development continues within a week; otherwise delete and record. Record what was kept and why.
 
-- [ ] **Step 6: Commit and push**
+- [ ] **Step 3: Full suite, commit, push**
+
+Run: `uv run pytest -q && (cd spikes/extension && npm test)`
+Expected: all pass.
 
 ```bash
-git add spikes/p5_chat_post.py docs/superpowers/findings/2026-10-plan-0-findings.md
-git commit -m "spikes: P5 Chat app scope; Plan 0 findings and stop/go"
+git add docs/superpowers/findings/2026-10-plan-0-findings.md
+git commit -m "findings: Plan 0 stop/go and cleanup"
 git push
 ```

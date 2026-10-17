@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "track": {
+    "type": "product",
+    "name": "Snoop (yo-snoop)",
+    "slug": null,
+    "productType": "internal voice assistant",
+    "scopeMode": "conform",
+    "jira": null,
+    "deprecated": null
+  },
+  "currentStage": "kickoff",
+  "stages": {
+    "kickoff": {
+      "status": "in-progress",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "pm": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "ux": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "ui": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "architect": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "engineer": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "qa": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    },
+    "qc": {
+      "status": "not-started",
+      "revisions": 0,
+      "criticPasses": 0,
+      "checkpoint": null
+    }
+  },
+  "pendingFeedback": null,
+  "backlog": [],
+  "chainHead": null,
+  "beastMode": null,
+  "updatedAt": "2026-10-10T00:31:44.469Z"
+}
