@@ -18,3 +18,14 @@ def test_stop_phrase_survives_transcription(stt):
 @pytest.mark.slow
 def test_decoy_is_not_a_wake(stt):
     assert not is_wake(stt.transcribe(say_to_array("We should snoop around the logs later.")))
+
+
+def test_transcriber_biases_toward_the_wake_word():
+    from yosnoop.desk import stt as m
+    calls = {}
+    class FakeModel:
+        def transcribe(self, audio, **kw): calls.update(kw); return iter([]), None
+    t = m.Transcriber.__new__(m.Transcriber); t.m = FakeModel()
+    import numpy as np
+    t.transcribe(np.zeros(16000, np.float32))
+    assert calls["hotwords"] == "Snoop"
