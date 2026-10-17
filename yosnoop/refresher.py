@@ -58,8 +58,14 @@ class Refresher:
         except subprocess.CalledProcessError as e:
             errors.append(f"git: {e}")
         try:
-            status = {"pull_requests": json.loads(self.gh(["pr", "list", "--state", "all", "--limit", "30", "--json",
-                                                           "number,title,state,author,mergedAt,reviewDecision,headRefName"])),
+            fields = "number,title,state,author,mergedAt,reviewDecision,headRefName,baseRefName"
+            # every open PR (old ones too) plus the 30 most recent of any state
+            prs = {p["number"]: p for p in json.loads(self.gh(["pr", "list", "--state", "all", "--limit", "30", "--json", fields]))}
+            prs.update({p["number"]: p for p in json.loads(self.gh(["pr", "list", "--state", "open", "--limit", "200", "--json", fields]))})
+            states = [p.get("state", "") for p in prs.values()]
+            status = {"counts": {"open_pull_requests": states.count("OPEN"),
+                                 "note": "open count covers every open PR; other states cover only the 30 most recent"},
+                      "pull_requests": sorted(prs.values(), key=lambda p: -p["number"]),
                       "runs": json.loads(self.gh(["run", "list", "--limit", "30", "--json",
                                                   "headBranch,conclusion,status,createdAt,workflowName"]))}
             (self.k / "pr-ci-status.json").write_text(redact(json.dumps(status, indent=1)))

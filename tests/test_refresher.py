@@ -40,3 +40,16 @@ def test_map_leaves_out_tests_and_stays_orientation_sized():
     from yosnoop.refresher import IGNORE, INCLUDE, REPOMIX
     assert "**/__tests__/**" in IGNORE and "**/*.test.*" in IGNORE
     assert "scripts/" not in INCLUDE and REPOMIX == "repomix@1.18.1"
+
+
+def test_old_open_prs_are_kept_alongside_recent_ones(tmp_path):
+    def gh(args):
+        if args[0] == "pr" and "open" in args:
+            return json.dumps([{"number": 3, "title": "old open", "state": "OPEN"}])
+        if args[0] == "pr":
+            return json.dumps([{"number": 9, "title": "new merged", "state": "MERGED"}])
+        return "[]"
+    Refresher(make_origin(tmp_path), tmp_path / "k", gh=gh, repomix=fake_repomix).refresh()
+    st = json.loads((tmp_path / "k" / "pr-ci-status.json").read_text())
+    assert [p["number"] for p in st["pull_requests"]] == [9, 3]
+    assert st["counts"]["open_pull_requests"] == 1
