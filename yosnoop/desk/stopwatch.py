@@ -4,7 +4,12 @@ from collections import deque
 import numpy as np
 from yosnoop.wake import is_stop
 
-POLL_S = 0.4
+POLL_S = 0.25
+# Over Snoop's own voice Whisper hears "Do not bother"; biasing toward the phrase recovers it (0 false stops measured)
+STOP_HOTWORDS = "peanut butter"
+# Own small model: measured (say voices, phrase over Snoop's voice) tiny.en caught 5/6, mostly 0.2–0.6 s after the
+# phrase, 0/15 false stops; base.en and small.en were slower (~2 s) and missed more.
+STOP_MODEL = "tiny.en"
 
 
 class StopWindow:
@@ -30,7 +35,7 @@ async def stop_watch_once(state, window: StopWindow, transcribe, on_stop, now: f
     audio = window.audio()
     if audio.size == 0:
         return False
-    text = await asyncio.to_thread(transcribe, audio)
+    text = await asyncio.to_thread(transcribe, audio, hotwords=STOP_HOTWORDS)
     if is_stop(text):
         window.clear()
         await on_stop()

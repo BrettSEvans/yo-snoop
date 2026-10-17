@@ -17,3 +17,6 @@ def test_stop_anywhere(t):
 
 def test_stop_not_partial():
     assert not is_stop("peanut")
+
+def test_stop_heard_as_one_word():
+    assert is_stop("Peanutbutter!")

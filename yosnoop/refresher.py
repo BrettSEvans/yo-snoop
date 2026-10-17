@@ -64,7 +64,7 @@ class Refresher:
             prs.update({p["number"]: p for p in json.loads(self.gh(["pr", "list", "--state", "open", "--limit", "200", "--json", fields]))})
             states = [p.get("state", "") for p in prs.values()]
             status = {"counts": {"open_pull_requests": states.count("OPEN"),
-                                 "note": "open count covers every open PR; other states cover only the 30 most recent"},
+                                 "note": "open count covers up to 200 open PRs; other states cover only the 30 most recent"},
                       "pull_requests": sorted(prs.values(), key=lambda p: -p["number"]),
                       "runs": json.loads(self.gh(["run", "list", "--limit", "30", "--json",
                                                   "headBranch,conclusion,status,createdAt,workflowName"]))}

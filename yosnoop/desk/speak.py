@@ -15,6 +15,8 @@ class Speaker:
                 # "--": answer text can never be read as a `say` option
                 cmd = ["say", *(["-v", self.voice] if self.voice else []), "--", s]
                 self.proc = await self.runner(*cmd)
+                if self._stopped:  # stop() landed while say was starting
+                    self.proc.terminate()
                 await self.proc.wait()
         finally:
             self.proc = None

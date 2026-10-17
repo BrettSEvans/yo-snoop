@@ -15,7 +15,7 @@ def test_watch_fires_stop_while_speaking_and_clears_the_window():
     w = StopWindow(rate=10, window_s=1.0); w.add(np.ones(10, np.float32))
     stopped = []
     async def on_stop(): stopped.append(1)
-    fired = asyncio.run(stop_watch_once(s, w, lambda a: "okay peanut butter", on_stop, now=2.0))
+    fired = asyncio.run(stop_watch_once(s, w, lambda a, hotwords=None: "okay peanut butter" if hotwords == "peanut butter" else "do not bother", on_stop, now=2.0))
     assert fired and stopped == [1] and w.audio().size == 0
 
 def test_watch_is_idle_when_not_speaking():
@@ -23,7 +23,7 @@ def test_watch_is_idle_when_not_speaking():
     w = StopWindow(rate=10, window_s=1.0); w.add(np.ones(10, np.float32))
     called = []
     async def on_stop(): called.append(1)
-    assert not asyncio.run(stop_watch_once(s, w, lambda a: called.append("t") or "peanut butter", on_stop, now=2.0))
+    assert not asyncio.run(stop_watch_once(s, w, lambda a, hotwords=None: called.append("t") or "peanut butter", on_stop, now=2.0))
     assert called == []
 
 def test_utterances_that_start_while_blocked_are_not_transcribed():

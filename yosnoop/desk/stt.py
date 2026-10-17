@@ -12,12 +12,12 @@ class Transcriber:
         self.m = WhisperModel(model, device="cpu", compute_type=compute_type)
         self._lock = threading.Lock()  # the stop watcher and the main loop share one model
 
-    def transcribe(self, audio: np.ndarray, rate: int = 16000) -> str:
+    def transcribe(self, audio: np.ndarray, rate: int = 16000, hotwords: str = HOTWORDS) -> str:
         assert rate == 16000, "faster-whisper expects 16 kHz mono"
         with self._lock:
-            return self._run(audio)
+            return self._run(audio, hotwords)
 
-    def _run(self, audio: np.ndarray) -> str:
+    def _run(self, audio: np.ndarray, hotwords: str) -> str:
         segments, _ = self.m.transcribe(audio.astype(np.float32), language="en", beam_size=1, vad_filter=False,
-                                       hotwords=HOTWORDS)
+                                       hotwords=hotwords)
         return " ".join(s.text.strip() for s in segments).strip()

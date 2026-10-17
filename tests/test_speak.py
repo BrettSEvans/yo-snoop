@@ -34,3 +34,15 @@ def test_sentence_text_is_passed_after_double_dash():
     async def runner(*cmd, **kw): log.append(cmd); return FakeProc([], cmd[-1])
     asyncio.run(Speaker(runner=runner).speak(["-v Bad"], lambda: None, lambda: None))
     assert log[0][-2:] == ("--", "-v Bad")
+
+def test_stop_during_say_startup_still_stops():
+    log = []
+    async def go():
+        s = Speaker()
+        async def runner(*cmd):
+            await s.stop()  # stop arrives while say is starting
+            p = FakeProc(log, cmd[-1]); return p
+        s.runner = runner
+        await s.speak(["One.", "Two."], lambda: None, lambda: None)
+    asyncio.run(go())
+    assert ("terminate", "One.") in log

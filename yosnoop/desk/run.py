@@ -84,7 +84,7 @@ async def _run_desk(argv: list[str]) -> int:
     from yosnoop.desk.endpoint import Endpointer
     from yosnoop.desk.speak import Speaker
     from yosnoop.desk.stt import Transcriber
-    from yosnoop.desk.stopwatch import StopWindow, stop_watch_once, POLL_S
+    from yosnoop.desk.stopwatch import StopWindow, stop_watch_once, POLL_S, STOP_MODEL
     from yosnoop.prepare import prepare, ORIGIN
     from yosnoop.refresher import Refresher
     import sounddevice as sd
@@ -113,7 +113,7 @@ async def _run_desk(argv: list[str]) -> int:
             del key
         await brain.start()
     print("Loading speech recognition…")
-    stt = Transcriber()
+    stt, stop_stt = Transcriber(), Transcriber(STOP_MODEL)
     ctx = DeskCtx(state=DeskState(), brain=brain, speaker=Speaker(), host_name=host.display_name,
                   log=lambda e: qlog.write(e, logdir), dry=dry)
     loop, q = asyncio.get_running_loop(), asyncio.Queue()
@@ -132,7 +132,7 @@ async def _run_desk(argv: list[str]) -> int:
         while True:
             await asyncio.sleep(POLL_S)
             now = time.monotonic()
-            await stop_watch_once(ctx.state, window, stt.transcribe,
+            await stop_watch_once(ctx.state, window, stop_stt.transcribe,
                                   lambda: handle_utterance(ctx, "peanut butter", now, now), now)
 
     tasks = set()

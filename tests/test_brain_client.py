@@ -45,3 +45,28 @@ def test_replies_for_other_ids_are_skipped(tmp_path):
         c = BrainClient([sys.executable, str(f)], {"type": "dev"}); await c.start()
         r = await c.ask("q", "x", "desk"); await c.stop(); return r
     assert asyncio.run(go()).text == "new"
+
+def test_restart_that_fails_reports_offline_instead_of_crashing(tmp_path):
+    f = tmp_path / "dies.py"; f.write_text("import sys; sys.exit(1)\n")
+    async def go():
+        c = BrainClient([sys.executable, str(f)], {"type": "dev"})
+        await c.start(); await asyncio.sleep(0.2)
+        return [await c.ask("q", "x", "desk") for _ in range(3)], c.restarts
+    replies, restarts = asyncio.run(go())
+    assert all(not r.ok and r.reason == "offline" for r in replies) and restarts == 1
+
+def test_long_and_odd_replies(tmp_path):
+    f = tmp_path / "odd.py"
+    f.write_text(textwrap.dedent('''
+    import json, sys
+    for line in sys.stdin:
+        m = json.loads(line)
+        if m["type"] == "ask":
+            print("not json at all", flush=True)
+            print(json.dumps({"type": "answer", "id": m["id"], "text": "x" * 200000, "clone_age_s": 1}), flush=True)
+    '''))
+    async def go():
+        c = BrainClient([sys.executable, str(f)], {"type": "dev"}); await c.start()
+        r = await c.ask("q", "x", "desk"); await c.stop(); return r
+    r = asyncio.run(go())
+    assert r.ok and len(r.text) == 200000
