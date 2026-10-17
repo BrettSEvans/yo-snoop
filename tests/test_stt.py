@@ -25,7 +25,8 @@ def test_transcriber_biases_toward_the_wake_word():
     calls = {}
     class FakeModel:
         def transcribe(self, audio, **kw): calls.update(kw); return iter([]), None
-    t = m.Transcriber.__new__(m.Transcriber); t.m = FakeModel()
+    import threading
+    t = m.Transcriber.__new__(m.Transcriber); t.m = FakeModel(); t._lock = threading.Lock()
     import numpy as np
     t.transcribe(np.zeros(16000, np.float32))
     assert calls["hotwords"] == "Snoop"

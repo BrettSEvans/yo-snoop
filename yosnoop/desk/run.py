@@ -2,7 +2,7 @@ import asyncio, sys, time
 from dataclasses import dataclass, field
 from typing import Callable
 from yosnoop.desk.state import Ask, Stop
-from yosnoop.gate import gate
+from yosnoop.gate import gate, BLOCKED
 from yosnoop.speech import shape
 
 EARSHOT = "Desk Snoop answers out loud. Use it only when everyone who can hear it is on the Saasless team."
@@ -38,29 +38,30 @@ async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float) ->
                 async with ctx.lock:  # one question at a time through the brain's single pipe
                     ctx.inflight += 1; ctx.inflight_max = max(ctx.inflight_max, ctx.inflight)
                     try:
-                        await _answer(ctx, a.question)
+                        await _answer(ctx, a)
                     finally:
                         ctx.inflight -= 1
 
 
-async def _answer(ctx: DeskCtx, question: str) -> None:
+async def _answer(ctx: DeskCtx, ask: Ask) -> None:
+    question = ask.question
     t0 = time.monotonic()
     entry = {"ts": time.time(), "asker": ctx.host_name, "room": "desk", "question": question}
     reply = await ctx.brain.ask(question, ctx.host_name, "desk")
     on_start = lambda: ctx.state.speaking_started(time.monotonic())
     on_end = lambda: ctx.state.speaking_ended(time.monotonic())
-    if ctx.state.muted:  # "peanut butter" while the brain was thinking: say nothing
+    if ctx.state.stops != ask.stop_seq:  # "peanut butter" since this was asked: say nothing
         outcome = "stopped"
     elif not reply.ok:
         await ctx.speaker.speak(["Snoop here, my brain's offline."] if reply.reason == "offline"
                                 else ["Snoop here, lost the thread, ask again."], on_start, on_end)
         outcome = "offline"
     else:
-        g = gate(reply.text)
-        if not g.allowed:
-            await ctx.speaker.speak([g.text], on_start, on_end); outcome = "blocked"
+        s = shape(reply.text, reply.clone_age_s)
+        # gate the raw answer and exactly what will be printed and spoken (markdown removal can rejoin a key)
+        if not all(gate(t).allowed for t in (reply.text, s.full, " ".join(s.spoken))):
+            await ctx.speaker.speak([BLOCKED], on_start, on_end); outcome = "blocked"
         else:
-            s = shape(g.text, reply.clone_age_s)
             ctx.print_fn(f"\n[Snoop → {ctx.host_name}] {s.full}")
             await ctx.speaker.speak(s.spoken, on_start, on_end); outcome = "spoken"
     ctx.log({**entry, "outcome": outcome, "latency_s": round(time.monotonic() - t0, 2)})
@@ -83,6 +84,7 @@ async def _run_desk(argv: list[str]) -> int:
     from yosnoop.desk.endpoint import Endpointer
     from yosnoop.desk.speak import Speaker
     from yosnoop.desk.stt import Transcriber
+    from yosnoop.desk.stopwatch import StopWindow, stop_watch_once, POLL_S
     from yosnoop.prepare import prepare, ORIGIN
     from yosnoop.refresher import Refresher
     import sounddevice as sd
@@ -124,21 +126,33 @@ async def _run_desk(argv: list[str]) -> int:
             await asyncio.sleep(REFRESH_S)
             await asyncio.to_thread(Refresher(ORIGIN, paths.knowledge_dir()).refresh)
 
+    window = StopWindow()
+
+    async def stop_loop():
+        while True:
+            await asyncio.sleep(POLL_S)
+            now = time.monotonic()
+            await stop_watch_once(ctx.state, window, stt.transcribe,
+                                  lambda: handle_utterance(ctx, "peanut butter", now, now), now)
+
     tasks = set()
     refresher = None if dry else asyncio.create_task(refresh_loop())
+    watcher = asyncio.create_task(stop_loop())
     ep = Endpointer()
     print(f"Snoop ({host.display_name}) is listening. Say \"Yo Snoop, …\"; \"peanut butter\" stops it; Ctrl-C quits.")
     try:
         with sd.InputStream(samplerate=16000, channels=1, dtype="float32", blocksize=1600, callback=on_audio):
             while True:
                 frame, t = await q.get()
+                window.add(frame)
                 u = ep.feed(frame, t)
-                if u is None:
+                if u is None or ctx.state.blocked(u.start):  # overlaps Snoop's voice: only the watcher listens
                     continue
                 text = await asyncio.to_thread(stt.transcribe, u.audio)
                 task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end))
                 tasks.add(task); task.add_done_callback(tasks.discard)
     finally:
+        watcher.cancel()
         if refresher:
             refresher.cancel()
         await ctx.speaker.stop()

@@ -85,3 +85,20 @@ def test_dry_mode_never_asks_the_brain():
     asyncio.run(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
     asyncio.run(handle_utterance(c, "peanut butter", 3.0, 3.5))
     assert c.brain.asked == [] and logs == [] and printed == ["[dry] WAKE: CI?", "[dry] STOP"]
+
+def test_stop_then_new_wake_still_silences_the_first_answer():
+    c, _, logs = ctx(BrainReply(True, "First answer.", 60, None), delay=0.1)
+    async def go():
+        t1 = asyncio.create_task(handle_utterance(c, "Yo Snoop, one?", 1.0, 2.0))
+        await asyncio.sleep(0.02)
+        await handle_utterance(c, "peanut butter", 2.1, 2.5)
+        t2 = asyncio.create_task(handle_utterance(c, "Yo Snoop, two?", 5.0, 6.0))
+        await t1; await t2
+    asyncio.run(go())
+    assert logs[0]["outcome"] == "stopped" and logs[1]["outcome"] == "spoken"
+    assert c.speaker.said.count("First answer.") == 1
+
+def test_key_rejoined_by_markdown_removal_is_blocked():
+    c, printed, _ = ctx(BrainReply(True, "Here: gh**p_" + "Q" * 36 + "**", 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, key?", 1.0, 2.0))
+    assert c.speaker.said == ["Snoop here, can't share that one."] and printed == []

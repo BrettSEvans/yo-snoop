@@ -20,3 +20,8 @@ def test_stop_phrase_is_scrubbed():
 def test_markdown_bullets_are_not_spoken():
     s = shape("There are 8 open PRs.\n- **#563** fixes CI.\n- #536 adds a report.", 60)
     assert s.spoken == ["Snoop here.", "There are 8 open PRs.", "#563 fixes CI.", "#536 adds a report."]
+
+
+def test_identifiers_survive_and_abbreviations_do_not_split():
+    s = shape("Call `snake_case_id` in __init__ now, e.g. with 2 * 3 args. Done.", 60)
+    assert s.spoken == ["Snoop here.", "Call snake_case_id in __init__ now, e.g. with 2 * 3 args.", "Done."]
