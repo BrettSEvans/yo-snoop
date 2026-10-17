@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 _SPLIT = re.compile(r"(?<=[.!?])\s+")
 _PB = re.compile(r"peanut\W+butter", re.IGNORECASE)
+_MARKUP = re.compile(r"^\s*(?:[-*•]|#+|\d+[.)])\s+|[*_`]+")
 
 
 @dataclass(frozen=True)
@@ -11,8 +12,14 @@ class Shaped:
     full: str
 
 
+def _speakable(s: str) -> str:
+    return _MARKUP.sub("", s).strip()
+
+
 def sentences(text: str) -> list[str]:
-    return [s.strip() for s in _SPLIT.split(text.strip()) if s.strip()]
+    """Split on sentence ends and on line breaks (bullets), dropping markdown so `say` never reads it."""
+    parts = [p for line in text.strip().splitlines() for p in _SPLIT.split(line.strip())]
+    return [c for c in (_speakable(p) for p in parts) if c]
 
 
 def shape(answer: str, clone_age_s: float) -> Shaped:
