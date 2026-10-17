@@ -8,7 +8,7 @@ from yosnoop.refresher import Refresher
 from yosnoop.bundle import build_bundle
 from yosnoop.serena_cfg import project_yml, list_tools, assert_tools
 
-ORIGIN = "https://github.com/brett-saasless/Agent-C.git"
+ORIGIN = "https://github.com/Saasless-llc/Agent-C.git"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
