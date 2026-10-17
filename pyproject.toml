@@ -32,3 +32,4 @@ packages = ["yosnoop"]
 [tool.pytest.ini_options]
 testpaths = ["tests", "spikes"]
 markers = ["slow: needs the Whisper model"]
+addopts = "-m 'not slow'"
