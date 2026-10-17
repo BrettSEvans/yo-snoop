@@ -112,6 +112,7 @@ The next `./snoop desk` re-syncs the brain.
 | "Snoop here, my brain's offline." | It restarts the brain once automatically. If it keeps happening, run `./snoop doctor` and send Brett the output. |
 | "Snoop here, can't share that one." | The answer looked like it contained a secret, so it was blocked. Expected; rephrase or look it up yourself. |
 | "No Snoop API key in your Keychain" | Do step 4. |
+| "Peanut butter" doesn't stop it | Say it clearly, closer to the mic than the speakers are, and keep speaker volume moderate. Headphones avoid the problem entirely. |
 | It never wakes | Run `./snoop desk --dry` and say "Yo Snoop, test". No `WAKE` line → check the microphone permission (step 5) and speak closer. |
 | Credits ran out | Answers fail until the plan's monthly credits reset or the workspace limit is raised (owner decision). |
 | Any `doctor` FAIL | Stop using Snoop and send Brett the full `./snoop doctor` output. |
