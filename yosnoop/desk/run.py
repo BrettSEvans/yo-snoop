@@ -88,8 +88,9 @@ async def _run_desk(argv: list[str]) -> int:
     from yosnoop.prepare import prepare, ORIGIN
     from yosnoop.refresher import Refresher
     import sounddevice as sd
+    import numpy as np
 
-    dev, dry = "--dev" in argv, "--dry" in argv
+    dev, dry, debug = "--dev" in argv, "--dry" in argv, "--debug" in argv
     host = hostcfg.load_host(load(ROSTER))
     print(EARSHOT)
     logdir = paths.secrets_dir().parent / "logs"
@@ -139,16 +140,28 @@ async def _run_desk(argv: list[str]) -> int:
     refresher = None if dry else asyncio.create_task(refresh_loop())
     watcher = asyncio.create_task(stop_loop())
     ep = Endpointer()
+    level = {"peak": 0.0, "at": time.monotonic()}
+    if debug:
+        print(f"[debug] prints mic level each second and what Whisper heard (screen only, never saved). "
+              f"Speech counts above {ep.th}.")
     print(f"Snoop ({host.display_name}) is listening. Say \"Yo Snoop, …\"; \"peanut butter\" stops it; Ctrl-C quits.")
     try:
         with sd.InputStream(samplerate=16000, channels=1, dtype="float32", blocksize=1600, callback=on_audio):
             while True:
                 frame, t = await q.get()
                 window.add(frame)
+                if debug:
+                    level["peak"] = max(level["peak"], float(np.sqrt(np.mean(frame ** 2))))
+                    if t - level["at"] >= 1.0:
+                        print(f"[debug] mic level {level['peak']:.4f}" + ("  (silence: check microphone permission)"
+                                                                          if level["peak"] == 0.0 else ""))
+                        level.update(peak=0.0, at=t)
                 u = ep.feed(frame, t)
                 if u is None or ctx.state.blocked(u.start):  # overlaps Snoop's voice: only the watcher listens
                     continue
                 text = await asyncio.to_thread(stt.transcribe, u.audio)
+                if debug:
+                    print(f"[debug] heard: {text!r}")
                 task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end))
                 tasks.add(task); task.add_done_callback(tasks.discard)
     finally:
