@@ -5,7 +5,8 @@ class Speaker:
     def __init__(self, voice: str | None = None, runner=asyncio.create_subprocess_exec):
         self.voice, self.runner, self.proc, self._stopped = voice, runner, None, False
 
-    async def speak(self, sentences, on_start, on_end):
+    async def speak(self, sentences, on_start, on_end) -> bool:
+        """Returns True if stop() cut the answer short."""
         self._stopped = False
         on_start()
         try:
@@ -21,6 +22,7 @@ class Speaker:
         finally:
             self.proc = None
             on_end()
+        return self._stopped
 
     async def stop(self):
         self._stopped = True

@@ -20,3 +20,11 @@ def test_stop_not_partial():
 
 def test_stop_heard_as_one_word():
     assert is_stop("Peanutbutter!")
+
+def test_whisper_hears_yo_as_go():
+    assert is_wake("Go Snoop test") and is_wake("Go, Snoop, how many open PRs?")
+
+def test_bare_snoop_with_comma_wakes_but_not_snoop_dogg():
+    assert is_wake("Snoop, how many open pull requests are there?")
+    assert not is_wake("Snoop Dogg had a new album out")
+    assert not is_wake("we should snoop, maybe later")
