@@ -16,6 +16,7 @@ class Spk:
             if self._stop: break
             self.said.append(s); await asyncio.sleep(self.per)
         on_end()
+        return self._stop
     async def stop(self): self.stopped += 1; self._stop = True
 
 def ctx(reply, delay=0.0, per=0.0, dry=False):
@@ -61,6 +62,7 @@ def test_stop_is_heard_while_an_answer_is_being_spoken():
         await t
     asyncio.run(go())
     assert c.speaker.stopped == 1 and "Three." not in c.speaker.said
+    assert c.log.__self__[-1]["outcome"] == "stopped"
 
 def test_stop_while_thinking_cancels_the_answer():
     c, _, logs = ctx(BrainReply(True, "One.", 60, None), delay=0.1)

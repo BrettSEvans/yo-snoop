@@ -25,8 +25,8 @@ def test_stop_prevents_remaining_sentences():
     async def go():
         s = Speaker(runner=runner)
         t = asyncio.create_task(s.speak(["One.", "Two.", "Three."], lambda: None, lambda: None))
-        await asyncio.sleep(0.07); await s.stop(); await t
-    asyncio.run(go())
+        await asyncio.sleep(0.07); await s.stop(); return await t
+    assert asyncio.run(go()) is True
     assert "Three." not in log and any(e[0] == "terminate" for e in log if isinstance(e, tuple))
 
 def test_sentence_text_is_passed_after_double_dash():

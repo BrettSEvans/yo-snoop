@@ -63,7 +63,10 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
             await ctx.speaker.speak([BLOCKED], on_start, on_end); outcome = "blocked"
         else:
             ctx.print_fn(f"\n[Snoop → {ctx.host_name}] {s.full}")
-            await ctx.speaker.speak(s.spoken, on_start, on_end); outcome = "spoken"
+            cut = await ctx.speaker.speak(s.spoken, on_start, on_end)
+            if cut:
+                ctx.print_fn("(stopped)")
+            outcome = "stopped" if cut else "spoken"
     ctx.log({**entry, "outcome": outcome, "latency_s": round(time.monotonic() - t0, 2)})
 
 
@@ -133,8 +136,9 @@ async def _run_desk(argv: list[str]) -> int:
         while True:
             await asyncio.sleep(POLL_S)
             now = time.monotonic()
-            await stop_watch_once(ctx.state, window, stop_stt.transcribe,
-                                  lambda: handle_utterance(ctx, "peanut butter", now, now), now)
+            if await stop_watch_once(ctx.state, window, stop_stt.transcribe,
+                                     lambda: handle_utterance(ctx, "peanut butter", now, now), now) and debug:
+                print("[debug] stop phrase heard while speaking")
 
     tasks = set()
     refresher = None if dry else asyncio.create_task(refresh_loop())
