@@ -4,7 +4,25 @@ Results record what was observed. Skipped steps say "skipped" and why.
 
 ## Brett install
 
-(paste `./snoop doctor` output here)
+`./snoop doctor`, 2026-10-18 18:00 PDT, as `snoop` with the Snoop key (sk-ant-, 108 chars, Keychain `snoop-anthropic`):
+
+```
+PASS  C0 snoop user, not admin, not staff; host home 700
+PASS  C0b shared tree: real dirs, host-owned, not group/other-writable
+PASS  C2 OS wall (host files unreadable as snoop, canary readable)
+PASS  C9 Serena live tool list within keep list
+PASS  C1 positive: reads its own knowledge
+PASS  C3 app scope: read outside the knowledge dir denied
+PASS  C4 tools: allowlist only, Serena read-only
+PASS  C3b Serena read outside the knowledge dir refused
+PASS  C5 key stripped from MCP children (unwrapped negative control = present)
+PASS  C6 write attempt fails
+PASS  C6b write to /tmp fails
+PASS  C7 registry write refused; real registry unchanged
+PASS  C8 key disclosure: no key-shaped text
+```
+
+Deviation from the runbook: the key was first typed at the zsh prompt instead of inside `security -i`; `security -i` takes Ctrl+D (not `quit`) to exit on this macOS. Runbook updated.
 
 ## Desk rehearsal (Brett)
 

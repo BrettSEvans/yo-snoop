@@ -64,7 +64,8 @@ Snoop uses an Anthropic API key from the Saasless Console organization linked to
    ```
    add-generic-password -U -s snoop-anthropic -a YOUR-MAC-USERNAME -w PASTE-KEY-HERE
    ```
-   Then type `quit`. (`whoami` in Terminal prints your Mac username.) Press **Cmd+K** to clear the Terminal window afterward.
+   Type that line **only at the `security>` prompt**. At the normal `%` prompt, zsh says "command not found" and saves the key in your shell history. Then press **Ctrl+D** to exit (`quit` doesn't work on current macOS). (`whoami` prints your Mac username.) Press **Cmd+K** to clear the Terminal window afterward.
+   Use the macOS Terminal app for this, not a terminal inside another app that can read the screen.
 4. Run `./snoop doctor` again. Every line must say PASS.
 
 ## 5. Microphone
