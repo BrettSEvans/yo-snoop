@@ -21,9 +21,11 @@ class Endpointer:
     FLOOR_FACTOR = 2.0
     MAX_THRESHOLD = 0.06  # a loud room never makes Snoop deaf to normal speech
 
-    def __init__(self, rate=16000, threshold=0.015, hangover_s=0.7, min_s=0.3, max_s=20.0, history=100):
+    def __init__(self, rate=16000, threshold=0.015, hangover_s=0.7, min_s=0.3, max_s=20.0, history=100,
+                 preroll_s=0.4):
         self.rate, self.th, self.hang, self.min, self.max = rate, threshold, hangover_s, min_s, max_s
         self._levels = deque(maxlen=history)
+        self.preroll_s, self._pre = preroll_s, deque()  # quiet audio just before speech: keeps a soft first word
         self._buf, self._start, self._last_voice = [], None, None
 
     def threshold(self) -> float:
@@ -45,8 +47,13 @@ class Endpointer:
         dur = frame.size / self.rate
         if self._start is None:
             if not voiced:
+                self._pre.append((frame, t))
+                while self._pre and t + dur - self._pre[0][1] > self.preroll_s + 1e-9:
+                    self._pre.popleft()
                 return None
-            self._start = t
+            self._start = self._pre[0][1] if self._pre else t
+            self._buf = [f for f, _ in self._pre]
+            self._pre.clear()
         self._buf.append(frame)
         if voiced:
             self._last_voice = t + dur

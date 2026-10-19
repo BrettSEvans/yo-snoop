@@ -34,3 +34,6 @@ def test_strip_wake():
 
 def test_go_snoop_wakes_and_is_stripped():
     assert DeskState().on_utterance("Go Snoop, how many open PRs?", 1.0, 2.0) == [Ask("how many open PRs?")]
+
+def test_bare_snoop_comma_is_stripped():
+    assert DeskState().on_utterance("Snoop, how many open PRs?", 1.0, 2.0) == [Ask("how many open PRs?")]
