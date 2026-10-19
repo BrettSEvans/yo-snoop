@@ -153,7 +153,7 @@ async def _run_desk(argv: list[str]) -> int:
                 if debug:
                     level["peak"] = max(level["peak"], float(np.sqrt(np.mean(frame ** 2))))
                     if t - level["at"] >= 1.0:
-                        print(f"[debug] mic level {level['peak']:.4f}" + ("  (silence: check microphone permission)"
+                        print(f"[debug] mic level {level['peak']:.4f}  threshold {ep.threshold():.4f}" + ("  (silence: check microphone permission)"
                                                                           if level["peak"] == 0.0 else ""))
                         level.update(peak=0.0, at=t)
                 u = ep.feed(frame, t)

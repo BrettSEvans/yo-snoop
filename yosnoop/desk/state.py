@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass, field
 from yosnoop.wake import is_wake, is_stop
 
-_WAKE_PREFIX = re.compile(r"^\W*(yo|you|yoh|yeah)\W+snoop(y|s)?\b\W*", re.IGNORECASE)
+_WAKE_PREFIX = re.compile(r"^\W*(yo|you|yoh|yeah|go)\W+snoop(y|s)?\b\W*", re.IGNORECASE)
 
 
 @dataclass(frozen=True)

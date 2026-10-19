@@ -31,3 +31,6 @@ def test_empty_question_is_ignored():
 
 def test_strip_wake():
     assert strip_wake("Yo, Snoopy, any blockers?") == "any blockers?"
+
+def test_go_snoop_wakes_and_is_stripped():
+    assert DeskState().on_utterance("Go Snoop, how many open PRs?", 1.0, 2.0) == [Ask("how many open PRs?")]
