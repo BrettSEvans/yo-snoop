@@ -37,3 +37,19 @@ def test_go_snoop_wakes_and_is_stripped():
 
 def test_bare_snoop_comma_is_stripped():
     assert DeskState().on_utterance("Snoop, how many open PRs?", 1.0, 2.0) == [Ask("how many open PRs?")]
+
+def test_wake_then_pause_takes_the_next_utterance_as_the_question():
+    s = DeskState()
+    assert s.on_utterance("Yo Snoop", 1.0, 1.6) == []
+    assert s.on_utterance("Did the verify recipe pass?", 2.4, 4.0) == [Ask("Did the verify recipe pass?")]
+    assert s.on_utterance("and something else", 4.5, 5.0) == []      # armed only once
+
+def test_armed_wake_expires():
+    s = DeskState()
+    s.on_utterance("Yes, Snoop", 1.0, 1.5)
+    assert s.on_utterance("what is D17?", 8.0, 9.0) == []
+
+def test_armed_wake_still_honors_stop():
+    s = DeskState(); s.on_utterance("Yo Snoop", 1.0, 1.5)
+    assert s.on_utterance("peanut butter", 2.0, 2.5) == [Stop()]
+    assert s.on_utterance("anything", 3.0, 3.5) == []

@@ -13,16 +13,16 @@ class Utterance:
 class Endpointer:
     """Energy endpointer whose speech threshold rides above the room's noise floor.
 
-    A fixed threshold failed at the desk: background sat at 0.018–0.024 RMS, above 0.015, so pauses were never
-    seen. The floor is the 10th percentile of the last ~10 s of frame levels; speech must clear twice it.
+    A fixed threshold failed at the desk both ways: background at 0.018-0.024 RMS hid pauses, and a quiet mic
+    (silence ~0.001, speech ~0.010-0.035) clipped soft first words against 0.015. The floor is the 10th percentile of the last ~10 s of frame levels; speech must clear twice it.
     """
 
     WARMUP_FRAMES = 5
     FLOOR_FACTOR = 2.0
     MAX_THRESHOLD = 0.06  # a loud room never makes Snoop deaf to normal speech
 
-    def __init__(self, rate=16000, threshold=0.015, hangover_s=0.7, min_s=0.3, max_s=20.0, history=100,
-                 preroll_s=0.4):
+    def __init__(self, rate=16000, threshold=0.006, hangover_s=0.7, min_s=0.3, max_s=20.0, history=100,
+                 preroll_s=0.6):
         self.rate, self.th, self.hang, self.min, self.max = rate, threshold, hangover_s, min_s, max_s
         self._levels = deque(maxlen=history)
         self.preroll_s, self._pre = preroll_s, deque()  # quiet audio just before speech: keeps a soft first word

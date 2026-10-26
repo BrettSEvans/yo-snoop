@@ -34,7 +34,7 @@ def test_noisy_room_still_finds_the_pause():
     # background at 0.02 (above the 0.015 floor), speech at 0.08: the pause must still end the utterance
     seq = frames(0.02, 3.0, 0) + frames(0.08, 1.0, 3.0) + frames(0.02, 1.5, 4.0)
     got = run(seq)
-    assert len(got) == 1 and 2.5 <= got[0].start <= 3.1 and got[0].end - got[0].start < 1.9  # 0.4 s pre-roll
+    assert len(got) == 1 and 2.3 <= got[0].start <= 3.1 and got[0].end - got[0].start < 2.1  # 0.6 s pre-roll
 
 def test_background_alone_is_not_speech():
     assert run(frames(0.02, 5.0, 0)) == []
@@ -43,3 +43,8 @@ def test_preroll_keeps_the_soft_first_word():
     seq = frames(0.0, 1.0, 0) + frames(0.01, 0.3, 1.0) + frames(0.1, 1.0, 1.3) + frames(0.0, 1.0, 2.3)
     got = run(seq)
     assert len(got) == 1 and got[0].start <= 1.0 + 1e-6 and got[0].audio.size >= R * 1.3
+
+def test_quiet_voice_is_still_speech():
+    # Brett's desk: silence ~0.001, speech ~0.010-0.035
+    seq = frames(0.001, 1.0, 0) + frames(0.010, 1.0, 1.0) + frames(0.001, 1.0, 2.0)
+    assert len(run(seq)) == 1

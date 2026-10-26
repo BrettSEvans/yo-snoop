@@ -28,3 +28,13 @@ def test_bare_snoop_with_comma_wakes_but_not_snoop_dogg():
     assert is_wake("Snoop, how many open pull requests are there?")
     assert not is_wake("Snoop Dogg had a new album out")
     assert not is_wake("we should snoop, maybe later")
+
+def test_desk_mishearings_of_yo_snoop():
+    for t in ("Yes, Snoop", "Yes Snoop, tell me", "You go Snoop", "You gonna Snoop any blockers?"):
+        assert is_wake(t), t
+
+def test_decoys_from_the_desk_run_stay_quiet():
+    for t in ("Snoop around the logs later", "Yo, can you snip that branch?", "I said yo Snoop earlier but never mind",
+              "Let's not Snoop on...", "Snoop", "thing is cool", "Snooping is not a feature.", "Don't snoop",
+              "Snip Dogg having a new album out.", "you should snoop the logs"):
+        assert not is_wake(t), t

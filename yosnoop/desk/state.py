@@ -2,7 +2,9 @@ import re
 from dataclasses import dataclass, field
 from yosnoop.wake import is_wake, is_stop
 
-_WAKE_PREFIX = re.compile(r"^\W*(?:(yo|you|yoh|yeah|go)\W+snoop(y|s)?\b|snoopy?\s*,)\W*", re.IGNORECASE)
+_WAKE_PREFIX = re.compile(r"^\W*(?:(yo|you|yoh|yeah|yes|go)\W+(?:(go|gonna|got)\W+)?snoop(y|s)?\b|snoopy?\s*,)\W*",
+                          re.IGNORECASE)
+ARMED_S = 5.0  # "Yo Snoop" ... pause ... question: the next utterance within this window is the question
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,7 @@ def strip_wake(text: str) -> str:
 class DeskState:
     def __init__(self, holdoff_s: float = 1.0):
         self.holdoff, self.muted, self.stops = holdoff_s, False, 0
+        self._armed_until = float("-inf")
         self._speaking_since, self._spoke_until = None, float("-inf")
 
     def speaking_started(self, t: float): self._speaking_since = t
@@ -38,10 +41,20 @@ class DeskState:
 
     def on_utterance(self, text: str, start: float, end: float) -> list:
         if is_stop(text):
-            self.muted, self.stops = True, self.stops + 1
+            self.muted, self.stops, self._armed_until = True, self.stops + 1, float("-inf")
             return [Stop()]
-        if self.blocked(start) or not is_wake(text):
+        if self.blocked(start):
+            return []
+        if not is_wake(text):
+            if start <= self._armed_until and text.strip():
+                self._armed_until = float("-inf")
+                self.muted = False
+                return [Ask(text.strip(), self.stops)]
             return []
         self.muted = False
         q = strip_wake(text)
-        return [Ask(q, self.stops)] if q else []
+        if not q:
+            self._armed_until = end + ARMED_S
+            return []
+        self._armed_until = float("-inf")
+        return [Ask(q, self.stops)]
