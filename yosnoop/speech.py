@@ -26,7 +26,9 @@ def _speakable(s: str) -> str:
 def sentences(text: str) -> list[str]:
     """Split on sentence ends and on line breaks (bullets), dropping markdown so `say` never reads it."""
     guarded = _ABBREV.sub(lambda m: m.group(1) + "\x00", text.strip())  # "e.g." doesn't end a sentence
-    parts = [p.replace("\x00", ".") for line in guarded.splitlines() for p in _SPLIT.split(line.strip())]
+    # drop list markers before splitting, or "1. PR #712 …" splits into a sentence "1."
+    parts = [p.replace("\x00", ".") for line in guarded.splitlines()
+             for p in _SPLIT.split(_BULLET.sub("", line).strip())]
     return [c for c in (_speakable(p) for p in parts) if c]
 
 
