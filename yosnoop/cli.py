@@ -7,7 +7,7 @@ ROSTER = Path(__file__).resolve().parent.parent / "config" / "team.json"
 
 def main(argv: list[str]) -> int:
     if not argv:
-        print("usage: ./snoop {setup|prepare|desk|doctor|whoami}"); return 2
+        print("usage: ./snoop {setup|prepare|desk|doctor|whoami|voice-setup}"); return 2
     cmd, rest = argv[0], argv[1:]
     if cmd == "whoami":
         m = hostcfg.load_host(load(ROSTER)); print(f"Snoop ({m.display_name}) — host {m.email}"); return 0
@@ -20,6 +20,12 @@ def main(argv: list[str]) -> int:
         for e in rep.errors:
             print(f"  - {e}")
         return 0 if rep.ok else 1
+    if cmd == "voice-setup":
+        from yosnoop.desk.voice import fetch, MODEL_DIR
+        print(f"Downloading Snoop's voice (Kokoro model + Onyx, ~330 MB) into {MODEL_DIR} …")
+        ok = fetch()
+        print("voice-setup: ok" if ok else "voice-setup: files did not verify; delete models/kokoro and retry")
+        return 0 if ok else 1
     if cmd == "doctor":
         from yosnoop.doctor import run_doctor; return run_doctor(rest)
     if cmd == "desk":

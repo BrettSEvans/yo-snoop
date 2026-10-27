@@ -19,7 +19,7 @@ Desk Snoop listens on your Mac's microphone. Say "Yo Snoop, …" and it answers 
   gh auth status
   ```
 - Your saasless.ai email in `config/team.json` (ask Brett).
-- About 3 GB free disk: the brain's runtime (~0.8 GB), the knowledge copy (~0.4 GB), and the speech model (~0.5 GB).
+- About 4 GB free disk: the brain's runtime (~0.8 GB), the knowledge copy (~0.4 GB), the speech-recognition model (~0.5 GB), and Snoop's voice (~0.3 GB model plus its libraries).
 
 ## 2. Get the code
 
@@ -47,6 +47,14 @@ Then build Snoop's notes and check the sandbox:
 ./snoop prepare
 ./snoop doctor
 ```
+
+Then download Snoop's voice (Kokoro "Onyx", ~330 MB, runs on your Mac; nothing is sent anywhere when it speaks):
+
+```bash
+./snoop voice-setup
+```
+
+Without it Snoop still works, using the Mac's built-in voice.
 
 `prepare` takes about 30 seconds after the first time. Every `doctor` line must say **PASS** once your key is in (step 4). If any line says FAIL, stop and send the output to Brett.
 

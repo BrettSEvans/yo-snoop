@@ -85,7 +85,7 @@ async def _run_desk(argv: list[str]) -> int:
     from yosnoop.brain_client import BrainClient, production_argv
     from yosnoop.desk.state import DeskState
     from yosnoop.desk.endpoint import Endpointer
-    from yosnoop.desk.speak import Speaker
+    from yosnoop.desk.voice import make_speaker
     from yosnoop.desk.stt import Transcriber
     from yosnoop.desk.stopwatch import StopWindow, stop_watch_once, POLL_S, STOP_MODEL
     from yosnoop.prepare import prepare, ORIGIN
@@ -116,9 +116,9 @@ async def _run_desk(argv: list[str]) -> int:
             brain = BrainClient(production_argv(), {"type": "key", "value": key})
             del key
         await brain.start()
-    print("Loading speech recognition…")
+    print("Loading speech recognition and Snoop's voice…")
     stt, stop_stt = Transcriber(), Transcriber(STOP_MODEL)
-    ctx = DeskCtx(state=DeskState(), brain=brain, speaker=Speaker(), host_name=host.display_name,
+    ctx = DeskCtx(state=DeskState(), brain=brain, speaker=make_speaker(), host_name=host.display_name,
                   log=lambda e: qlog.write(e, logdir), dry=dry)
     loop, q = asyncio.get_running_loop(), asyncio.Queue()
 
