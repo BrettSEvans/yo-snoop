@@ -104,3 +104,12 @@ def test_key_rejoined_by_markdown_removal_is_blocked():
     c, printed, _ = ctx(BrainReply(True, "Here: gh**p_" + "Q" * 36 + "**", 60, None))
     asyncio.run(handle_utterance(c, "Yo Snoop, key?", 1.0, 2.0))
     assert c.speaker.said == ["Snoop here, can't share that one."] and printed == []
+
+
+def test_vosk_debug_line_shows_its_verdict():
+    from yosnoop.desk.run import vosk_debug_line
+    class FakeVosk:
+        def __init__(self, woke): self.woke = woke
+        def check(self, audio): return self.woke, "yo(1.00) snoop(0.98)"
+    assert vosk_debug_line(FakeVosk(True), None) == "[debug] vosk: WAKE  (yo(1.00) snoop(0.98))"
+    assert vosk_debug_line(FakeVosk(False), None) == "[debug] vosk: no    (yo(1.00) snoop(0.98))"

@@ -68,3 +68,5 @@ Same audio for both (8 Mac `say` voices × `p2_script.txt` + `p3_script.txt`, wa
 | Vosk grammar, conf ≥ 0.6, ≤ 0.2 s before | 291/304 (96%) | 1/160 ("we don't snoop on people here", one voice) |
 
 Without the "nothing much before it" rule, "I said yo snoop earlier" woke it in every voice. Synthetic voices only: Brett's real voice is the test that counts.
+
+With the desk's 0.6 s of pre-roll silence in front of each clip (as `./snoop desk` feeds it), Vosk scores 303/304 wakes but 5/160 decoys: "don't snoop" (3 voices), "we don't snoop…" and "the Snoopy cartoon" decode as "yo snoop". `./snoop desk --debug` now prints Vosk's verdict under Whisper's for each utterance (it doesn't change what Snoop does), so one live read scores both.

@@ -24,8 +24,14 @@ def main(argv: list[str]) -> int:
         from yosnoop.desk.voice import fetch, MODEL_DIR
         print(f"Downloading Snoop's voice (Kokoro model + Onyx, ~330 MB) into {MODEL_DIR} …")
         ok = fetch()
-        print("voice-setup: ok" if ok else "voice-setup: files did not verify; delete models/kokoro and retry")
-        return 0 if ok else 1
+        if not ok:
+            print("voice-setup: files did not verify; delete models/kokoro and retry"); return 1
+        from yosnoop.desk import vosk_wake
+        print(f"Downloading the wake-word checker (Vosk small English, ~40 MB) into {vosk_wake.MODEL_DIR} …")
+        if not vosk_wake.fetch():
+            print("voice-setup: wake-word model did not verify; delete models/vosk and retry"); return 1
+        print("voice-setup: ok")
+        return 0
     if cmd == "doctor":
         from yosnoop.doctor import run_doctor; return run_doctor(rest)
     if cmd == "desk":

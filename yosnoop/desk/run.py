@@ -70,6 +70,12 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     ctx.log({**entry, "outcome": outcome, "latency_s": round(time.monotonic() - t0, 2)})
 
 
+def vosk_debug_line(vw, audio) -> str:
+    """Second wake opinion, shown beside Whisper's in --debug; it does not change what Snoop does."""
+    woke, heard = vw.check(audio)
+    return f"[debug] vosk: {'WAKE' if woke else 'no  '}  ({heard})"
+
+
 def run_desk(argv: list[str]) -> int:
     try:
         return asyncio.run(_run_desk(argv))
@@ -118,6 +124,12 @@ async def _run_desk(argv: list[str]) -> int:
         await brain.start()
     print("Loading speech recognition and Snoop's voice…")
     stt, stop_stt = Transcriber(), Transcriber(STOP_MODEL)
+    vosk = None
+    if debug:
+        from yosnoop.desk.vosk_wake import make_vosk_wake
+        vosk = make_vosk_wake()
+        if vosk is None:
+            print("[debug] Vosk wake model not installed (./snoop voice-setup); showing Whisper only.")
     ctx = DeskCtx(state=DeskState(), brain=brain, speaker=make_speaker(), host_name=host.display_name,
                   log=lambda e: qlog.write(e, logdir), dry=dry)
     loop, q = asyncio.get_running_loop(), asyncio.Queue()
@@ -166,6 +178,8 @@ async def _run_desk(argv: list[str]) -> int:
                 text = await asyncio.to_thread(stt.transcribe, u.audio)
                 if debug:
                     print(f"[debug] heard: {text!r}")
+                    if vosk:
+                        print(await asyncio.to_thread(vosk_debug_line, vosk, u.audio))
                 task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end))
                 tasks.add(task); task.add_done_callback(tasks.discard)
     finally:

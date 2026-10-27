@@ -48,7 +48,7 @@ Then build Snoop's notes and check the sandbox:
 ./snoop doctor
 ```
 
-Then download Snoop's voice (Kokoro "Onyx", ~330 MB, runs on your Mac; nothing is sent anywhere when it speaks):
+Then download Snoop's voice (Kokoro "Onyx", ~330 MB) and a small wake-word checker (Vosk, ~40 MB). Both run on your Mac; nothing is sent anywhere:
 
 ```bash
 ./snoop voice-setup
