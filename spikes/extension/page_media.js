@@ -38,62 +38,6 @@
     else if (m.type === "card") cardText = m.text;
   });
 
-  // P2b: the meeting audio this seat receives goes to the host's Mac for the wake/stop checks.
-  // Remote audio tracks are mixed at 16 kHz and sent in ~0.26 s chunks; nothing is stored here.
-  // The engine runs at Chrome's own rate (a 16 kHz engine can get silence from remote tracks); we decimate to 16 kHz.
-  const listenCtx = new AudioContext();
-  const mix = listenCtx.createGain();
-  const tap = listenCtx.createScriptProcessor(4096, 1, 1);
-  mix.connect(tap); tap.connect(listenCtx.destination);  // the tap outputs silence; Meet plays the audio itself
-  tap.onaudioprocess = (e) => {
-    const f = e.inputBuffer.getChannelData(0);
-    e.outputBuffer.getChannelData(0).fill(0);
-    const step = listenCtx.sampleRate / 16000;  // 3 at 48 kHz: average each group (a simple low-pass) then keep one
-    const n = Math.floor(f.length / step), pcm = new Int16Array(n);
-    let peak = 0;
-    for (let i = 0; i < n; i++) {
-      const a = Math.floor(i * step), b = Math.floor((i + 1) * step);
-      let sum = 0;
-      for (let j = a; j < b; j++) sum += f[j];
-      const v = Math.max(-1, Math.min(1, sum / (b - a)));
-      pcm[i] = v * 32767; peak = Math.max(peak, Math.abs(v));
-    }
-    const bytes = new Uint8Array(pcm.buffer);
-    let bin = "";
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    window.postMessage({tag: TAG, dir: "to-ext", msg: {type: "meet_audio", pcm_b64: btoa(bin), rate: 16000,
-                                                        tracks: tapped.size, ctx: `${listenCtx.state} ${listenCtx.sampleRate} Hz`}}, location.origin);
-  };
-  // Each remote audio track is mixed once. Chrome gives Web Audio silence for a remote WebRTC track unless the
-  // track also plays through a media element, so each gets a muted, hidden player of its own.
-  const tapped = new Set();
-  function tapTrack(track) {
-    if (track.kind !== "audio" || tapped.has(track.id)) return;
-    tapped.add(track.id);
-    const ms = new MediaStream([track]);
-    const player = new Audio(); player.muted = true; player.srcObject = ms; player.play().catch(() => {});
-    listenCtx.resume();
-    listenCtx.createMediaStreamSource(ms).connect(mix);
-    track.addEventListener("ended", () => tapped.delete(track.id));
-  }
-  // Way 1: catch tracks as Meet's peer connections receive them.
-  const RealPC = window.RTCPeerConnection;
-  window.RTCPeerConnection = function (...args) {
-    const pc = new RealPC(...args);
-    pc.addEventListener("track", (ev) => tapTrack(ev.track));
-    return pc;
-  };
-  // Way 2: pick up the streams Meet's own audio/video players are playing.
-  setInterval(() => {
-    document.querySelectorAll("audio, video").forEach((el) => {
-      const src = el.srcObject;
-      if (src && typeof src.getAudioTracks === "function") src.getAudioTracks().forEach(tapTrack);
-    });
-    if (tapped.size) listenCtx.resume();
-  }, 2000);
-  window.RTCPeerConnection.prototype = RealPC.prototype;
-  Object.setPrototypeOf(window.RTCPeerConnection, RealPC);  // keep static methods (generateCertificate)
-
   const real = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia = async (constraints = {}) => {
     const tracks = [];
