@@ -58,6 +58,6 @@ Deviation from the runbook: the key was first typed at the zsh prompt instead of
 | 1 | `f3ab3ea` (main) | 9/19 FAIL | 0/10 | yes | Mic speech 0.016–0.035 vs threshold 0.015 clipped starts; "Yes Snoop", "You go/gonna Snoop"; pause after "Yo Snoop" split the question off |
 | 2 | `c702540` | 12/19 FAIL | 0/10 | yes | Louder mic (0.1–0.2). New mishearings: "You have Snoop", "No Snoop", "You don't snoop", "You have snooped"; line 28 lost "Yo Snoop" entirely |
 | replay of 1 and 2 through `2fef73a` patterns | — | 17/19 and 18/19 | 0/10 | yes | Lexical stopgap. Detector plan parked after its license gate failed |
-| 3: fresh lines, `spikes/p3_script.txt` | | /19 | /10 | | Brett |
+| 3: fresh lines, `spikes/p3_script.txt` | `87d4019` | 14/19 FAIL | 0/10 | yes | Misses: "You'll Snoop", "Your Snoop", "Good Snoop", bare "Snoop" then a pause, "Snoop emerged" ("who merged"). Whisper often drops "Yo" ("Snoop, …" still wakes). Lexical patterns don't generalize to unseen lines |
 | Jeremy, `spikes/p3_script.txt` | | /19 | /10 | | at install |
 | Lindsay, `spikes/p3_script.txt` | | /19 | /10 | | at install |
