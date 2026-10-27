@@ -33,3 +33,20 @@ What building the brain (Plan 1) and Desk Snoop (Plan 2) found that the plans di
 
 - Real-voice wake accuracy (≥ 18/20, 0/10 decoys) and "peanut butter" stop by ear (Plan 2 Task 6 Steps 4–5; rehearsal D6–D8).
 - `./snoop doctor` brain-turn controls as `snoop` (needs the Snoop API key in the Keychain).
+
+## Wake-word gate (2026-10-26, wake-word plan Task 1)
+
+The standard openWakeWord training recipe (`notebooks/automatic_model_training.ipynb`) pulls these inputs:
+
+| Input | Role | License |
+|---|---|---|
+| openWakeWord code, `melspectrogram.onnx`, `embedding_model.onnx` | library + frozen feature models | Apache-2.0 |
+| `rhasspy/piper-sample-generator` + `en_US-libritts_r-medium.pt` | synthetic "Yo Snoop" clips | MIT (generator); voice trained on LibriTTS-R (CC BY 4.0) |
+| `davidscripka/openwakeword_features` (ACAV100M ~2,000 h features + false-positive validation set) | main negative data | **CC BY-NC-SA 4.0** |
+| `davidscripka/MIT_environmental_impulse_responses` | room reverb | **unknown** |
+| `rudraml/fma` (small) | background music | openrail (underlying FMA tracks carry mixed CC licenses) |
+| `agkphysics/AudioSet` | background noise | CC BY 4.0 (card); audio originates on YouTube |
+
+**Gate: FAIL.** The main negative set is non-commercial and the reverb set is unlicensed, so a model trained with the standard recipe can't ship at Saasless. No training was run.
+
+Install check: `openwakeword==0.6.0` installs and imports on Python 3.12 / numpy 2.5.4 / onnxruntime 1.31.1 (scratch venv, deleted).
