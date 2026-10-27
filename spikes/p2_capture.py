@@ -1,6 +1,6 @@
 """Ask the extension for the caption region's HTML and save it to ~/.cache/snoop (never the repo).
 The capture holds real names and words: build the sanitized fixture from it, then delete it (Plan 0 Task 6)."""
-import asyncio, time
+import asyncio, logging, time
 from pathlib import Path
 from aiohttp import web
 from spikes.bridge_server import make_app, broadcast, CLIENTS
@@ -21,7 +21,8 @@ def on_message(m):
 
 async def main():
     app = make_app((SECRETS_DIR / "bridge-token").read_text(), on_message)
-    runner = web.AppRunner(app); await runner.setup()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")  # shows each connection attempt
+    runner = web.AppRunner(app, access_log_format='connection attempt: %r -> %s'); await runner.setup()
     await web.TCPSite(runner, "127.0.0.1", 8790).start()
     print("Listening on 127.0.0.1:8790. Waiting for the Snoop extension in a Meet tab…")
 

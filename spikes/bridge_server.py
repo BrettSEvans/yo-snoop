@@ -17,8 +17,9 @@ def make_app(token: str, on_message: Callable[[dict], None], hello_timeout: floa
         try:
             first = await asyncio.wait_for(ws.receive_json(), timeout=hello_timeout)
         except Exception:
-            await ws.close(code=4401, message=b"hello required"); return ws
+            print("bridge: refused a connection that sent no hello"); await ws.close(code=4401, message=b"hello required"); return ws
         if first.get("type") != "hello" or not hmac.compare_digest(str(first.get("token", "")), token):
+            print("bridge: refused a connection with the wrong token (re-run make_ext_config and reload the extension)")
             await ws.close(code=4401, message=b"bad token"); return ws
         await ws.send_json({"type": "ack"})
         app[CLIENTS].add(ws)
