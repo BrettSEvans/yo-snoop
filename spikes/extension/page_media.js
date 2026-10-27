@@ -52,18 +52,36 @@
     const bytes = new Uint8Array(pcm.buffer);
     let bin = "";
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    window.postMessage({tag: TAG, dir: "to-ext", msg: {type: "meet_audio", pcm_b64: btoa(bin), rate: 16000}}, location.origin);
+    window.postMessage({tag: TAG, dir: "to-ext", msg: {type: "meet_audio", pcm_b64: btoa(bin), rate: 16000,
+                                                        tracks: tapped.size, ctx: listenCtx.state}}, location.origin);
   };
+  // Each remote audio track is mixed once. Chrome gives Web Audio silence for a remote WebRTC track unless the
+  // track also plays through a media element, so each gets a muted, hidden player of its own.
+  const tapped = new Set();
+  function tapTrack(track) {
+    if (track.kind !== "audio" || tapped.has(track.id)) return;
+    tapped.add(track.id);
+    const ms = new MediaStream([track]);
+    const player = new Audio(); player.muted = true; player.srcObject = ms; player.play().catch(() => {});
+    listenCtx.resume();
+    listenCtx.createMediaStreamSource(ms).connect(mix);
+    track.addEventListener("ended", () => tapped.delete(track.id));
+  }
+  // Way 1: catch tracks as Meet's peer connections receive them.
   const RealPC = window.RTCPeerConnection;
   window.RTCPeerConnection = function (...args) {
     const pc = new RealPC(...args);
-    pc.addEventListener("track", (ev) => {
-      if (ev.track.kind !== "audio") return;
-      listenCtx.resume();
-      listenCtx.createMediaStreamSource(new MediaStream([ev.track])).connect(mix);
-    });
+    pc.addEventListener("track", (ev) => tapTrack(ev.track));
     return pc;
   };
+  // Way 2: pick up the streams Meet's own audio/video players are playing.
+  setInterval(() => {
+    document.querySelectorAll("audio, video").forEach((el) => {
+      const src = el.srcObject;
+      if (src && typeof src.getAudioTracks === "function") src.getAudioTracks().forEach(tapTrack);
+    });
+    if (tapped.size) listenCtx.resume();
+  }, 2000);
   window.RTCPeerConnection.prototype = RealPC.prototype;
   Object.setPrototypeOf(window.RTCPeerConnection, RealPC);  // keep static methods (generateCertificate)
 

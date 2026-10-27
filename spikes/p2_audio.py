@@ -54,7 +54,7 @@ def main() -> None:
         sys.exit("Vosk model missing: run ./snoop voice-setup")
     stop_stt = Transcriber(STOP_MODEL)
     utterances: asyncio.Queue = asyncio.Queue()
-    chunks = {"n": 0, "peak": 0.0}
+    chunks = {"n": 0, "peak": 0.0, "tracks": 0, "ctx": "?"}
 
     def on_utterance(u):
         utterances.put_nowait(u)
@@ -66,6 +66,7 @@ def main() -> None:
         if kind == "meet_audio":
             a = decode_pcm(m["pcm_b64"])
             chunks["n"] += 1; chunks["peak"] = max(chunks["peak"], float(np.abs(a).max(initial=0)))
+            chunks["tracks"], chunks["ctx"] = m.get("tracks", "?"), m.get("ctx", "?")
             audio_in.feed(m["pcm_b64"], time.monotonic())
         elif kind == "caption":
             s = last_sentence(m["text"])
@@ -84,7 +85,8 @@ def main() -> None:
     async def levels():  # one line every 5 s so a silent tap is obvious
         while True:
             await asyncio.sleep(5)
-            print(pdt_now(), f"[tap] {chunks['n']} chunks in 5 s, peak {chunks['peak']:.3f}"
+            print(pdt_now(), f"[tap] {chunks['n']} chunks in 5 s, peak {chunks['peak']:.3f}, "
+                  f"{chunks['tracks']} meeting audio stream(s), audio engine {chunks['ctx']}"
                   + ("  (no meeting audio: reload the extension and the Meet tab)" if chunks["n"] == 0 else ""))
             chunks.update(n=0, peak=0.0)
 
