@@ -19,6 +19,12 @@ function captionRegionHTML() {
   return el ? el.outerHTML : "NO-CAPTION-REGION";
 }
 
+// Page -> extension (meeting audio from page_media.js), same origin and tag only.
+window.addEventListener("message", (e) => {
+  if (e.source !== window || e.data?.tag !== TAG || e.data.dir !== "to-ext") return;
+  if (port) port.postMessage(e.data.msg);
+});
+
 function emitCaption(speaker, text) {
   port.postMessage({type: "caption", speaker, text, ts: Date.now() / 1000});
 }

@@ -38,6 +38,35 @@
     else if (m.type === "card") cardText = m.text;
   });
 
+  // P2b: the meeting audio this seat receives goes to the host's Mac for the wake/stop checks.
+  // Remote audio tracks are mixed at 16 kHz and sent in ~0.26 s chunks; nothing is stored here.
+  const listenCtx = new AudioContext({sampleRate: 16000});
+  const mix = listenCtx.createGain();
+  const tap = listenCtx.createScriptProcessor(4096, 1, 1);
+  mix.connect(tap); tap.connect(listenCtx.destination);  // the tap outputs silence; Meet plays the audio itself
+  tap.onaudioprocess = (e) => {
+    const f = e.inputBuffer.getChannelData(0);
+    e.outputBuffer.getChannelData(0).fill(0);
+    const pcm = new Int16Array(f.length);
+    for (let i = 0; i < f.length; i++) pcm[i] = Math.max(-1, Math.min(1, f[i])) * 32767;
+    const bytes = new Uint8Array(pcm.buffer);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    window.postMessage({tag: TAG, dir: "to-ext", msg: {type: "meet_audio", pcm_b64: btoa(bin), rate: 16000}}, location.origin);
+  };
+  const RealPC = window.RTCPeerConnection;
+  window.RTCPeerConnection = function (...args) {
+    const pc = new RealPC(...args);
+    pc.addEventListener("track", (ev) => {
+      if (ev.track.kind !== "audio") return;
+      listenCtx.resume();
+      listenCtx.createMediaStreamSource(new MediaStream([ev.track])).connect(mix);
+    });
+    return pc;
+  };
+  window.RTCPeerConnection.prototype = RealPC.prototype;
+  Object.setPrototypeOf(window.RTCPeerConnection, RealPC);  // keep static methods (generateCertificate)
+
   const real = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia = async (constraints = {}) => {
     const tracks = [];
