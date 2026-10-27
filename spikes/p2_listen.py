@@ -6,6 +6,7 @@ from aiohttp import web
 from spikes.bridge_server import make_app, broadcast
 from spikes.common import SECRETS_DIR, pdt_now
 from yosnoop.wake import is_wake, is_stop
+from spikes.p7_seats import shown_as
 
 LOG = Path.home() / ".cache" / "snoop" / "p2-events.ndjson"
 
@@ -31,7 +32,7 @@ def on_message(m):
     with open(LOG, "a") as f:
         f.write(json.dumps(rec) + "\n")
     flag = "WAKE " if rec["wake"] else "STOP " if rec["stop"] else "     "
-    print(pdt_now(), flag, m["speaker"], "|", now[-100:])
+    print(pdt_now(), flag, shown_as(m["speaker"]), "|", now[-100:])
 
 
 async def main():

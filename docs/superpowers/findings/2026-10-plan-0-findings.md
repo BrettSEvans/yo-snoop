@@ -7,10 +7,10 @@ Spec: docs/superpowers/specs/2026-10-05-yo-snoop-design.md · Plan: docs/superpo
 | P1 Meet participants principal + latency | §8.1, §4 step 4 | | | |
 | P2 Caption reading in the extension + wake accuracy | §8.2, §4 step 3 | **Reading HOLDS. Wake from captions HOLDS with a pause after "Yo Snoop"** (5/5, 0/2 decoys, stop 1/1); run together it fails (1-2/12) | §P2 | Meeting wake is "Yo Snoop!" alone, then the question within a few seconds (desk's armed window); scored run with another reader still due |
 | P3 Claude Code headless controls | §8.3, §5.3 | **PARTIAL** — Steps 1–5 HOLD; Step 6 (key helper) deferred to Plan 1 (D25) | §P3 | Plan 1 uses the SDK with `setting_sources=[]`, `strict_mcp_config`, `dontAsk`; `--max-turns` is SDK-only |
-| P4 Voice + card via extension (BlackHole fallback) | §8.4, D28, D29 | | | |
+| P4 Voice + card via extension (BlackHole fallback) | §8.4, D28, D29, D42 | **HOLDS** (2026-10-27, extension path; stop latency by ear, not yet measured on a recording) | §P4 | The meeting seat speaks Onyx through the extension; no BlackHole needed |
 | P5 Chat app, team group, one space | §8.5, §3.3 | | | |
-| P6 Own-voice label | §8.6, D30 | | | |
-| P7 Two-Snoop detection | §8.7, D32 | | | |
+| P6 Own-voice label | §8.6, D30 | **HOLDS** (2026-10-27): own speech is always captioned `You`; a peanut-butter caption stopped Snoop mid-speech 3/3 | §P6 | `own_label = "You"`: the seat ignores its own captions; stop works from captions while speaking |
+| P7 Two-Snoop detection | §8.7, D32 | Logic written and tested (`spikes/p7_seats.py`, 5/5); live run needs a second roster member | §P6 | — |
 
 Obsolete after the 2026-10-06 revision (D26): old P4 "Attendee SAML, OU-scoped" and old P6 "Attendee audio stop latency" — never run.
 
@@ -157,3 +157,28 @@ The question arrives as its own clean caption ("Is CI green?", "Who opened the n
 **Still due:**
 - The scored run with another reader (Jeremy or Lindsay), using the pause, to confirm on a second voice.
 - "Peanut butter" over Snoop's own voice. That's P4/P6 territory, because the Snoop seat's own speech isn't in its captions.
+
+## P4: Snoop's voice and card in the meeting (2026-10-27, 15:42-15:55 PDT)
+
+Brett, solo. The Snoop seat was in the Snoop Chrome profile, and Brett's phone (as brett@) was the listener. Probe: `spikes/p4_media.py`, a 33 s Onyx paragraph (Kokoro, D42) sent in 1 s chunks over the bridge, played by `page_media.js` into the seat's injected mic.
+
+| Step | Result |
+|---|---|
+| 2. Positive control | **Pass.** Onyx was heard clearly on the phone, and the "Snoop (Brett Evans)" card showed as the seat's video. The first try went unheard only because the phone's volume was down. |
+| 3. Negative control (real mic not used) | **Pass.** The phone's own mic was muted. While Snoop was idle, Brett talked near the laptop for about 10 s, and Snoop's tile stayed still. It lit up when Snoop talked. |
+| 4. Stop latency | **Pass by ear:** it "stops right away". It was not yet measured from a screen recording against the 1.0 s bar. |
+| 5. Device re-open | **Pass via the camera:** off and on, the card came back and Onyx still played. Switching the mic wasn't possible, because only one input device was listed. |
+
+**Verdict: HOLDS on the extension path.** The BlackHole fallback isn't needed. To carry into Plan 4:
+- The seat must join **unmuted**, or tell the host that it's muted.
+- Its own speech is not in its captions. Stop-while-speaking and own-voice exclusion are P6.
+
+## P6: own-voice label and stop while speaking (2026-10-27, 15:55-15:58 PDT)
+
+Brett, solo. The Snoop seat was in the Snoop profile with CC on, and his phone (brett@, mic on) was in the same meeting. Probe: `spikes/p6_loop.py`, with Onyx talking through the seat while captions were read.
+
+- **Own-voice label:** all **165** caption lines of Snoop's own speech, across 4 talking runs, came through labeled **`You`**. Brett's phone came through as `Brett Evans`. No other speaker ever got `You`. Snoop's own speech is captioned, including its "Snoop here" lines, so the seat **must ignore `You`** to avoid waking or standing down on itself. The P7 rule `is_own_seat(speaker, "You")` covers this.
+- **Stop while speaking:** Brett said "peanut butter" on the phone while Snoop talked. Meet captioned it as `Brett Evans | Peanut butter.` even over Snoop's speech: captions are per participant, so overlap doesn't garble the way it did at the desk. Snoop went silent **0.13 s, 0.24 s and 0.02 s** after the caption arrived (**3/3**). The time from the words to the caption was not measured. Captions run about 1 s behind speech (P2), so the spoken-word-to-silence total is roughly 1 s.
+- Meet's profanity filter shows up in captions (`m***********`); that's irrelevant to stops.
+
+P7 (two Snoops): `stand_down` is written and unit-tested (5/5). The live step, where another roster member's seat says "Snoop here", needs Jeremy or Lindsay.
