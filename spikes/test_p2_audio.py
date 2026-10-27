@@ -25,3 +25,10 @@ def test_speech_burst_between_quiet_becomes_one_utterance():
             ai.feed(_b64(part), t); t += part.size / 16000
     # speech ran 2.0-3.0 s; the desk endpointer keeps 0.6 s of lead-in before it
     assert len(got) == 1 and abs(got[0].start - 1.4) < 0.15 and abs(got[0].end - 3.0) < 0.15
+
+
+def test_importing_the_listener_helper_does_not_start_a_server():
+    import subprocess, sys
+    r = subprocess.run([sys.executable, "-c", "from spikes.p2_listen import last_sentence; print('ok')"],
+                       capture_output=True, text=True, timeout=10)
+    assert r.stdout.strip() == "ok"

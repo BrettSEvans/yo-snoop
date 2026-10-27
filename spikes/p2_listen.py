@@ -45,7 +45,8 @@ async def main():
         await enter.get()
         await broadcast(app, {"type": "dump"})
 
-try:
-    asyncio.run(main())
-except KeyboardInterrupt:
-    print("\nstopped")
+if __name__ == "__main__":  # p2_audio imports last_sentence from here
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nstopped")
