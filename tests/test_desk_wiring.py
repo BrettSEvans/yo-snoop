@@ -211,3 +211,26 @@ def test_default_thinking_gap_is_a_few_seconds():
     from yosnoop.desk.run import DeskCtx as D
     from yosnoop.desk.thinking import GAPS_S
     assert D(None, None, None, "x", print).think_gap == GAPS_S
+
+
+def test_debug_mic_line_turns_quiet_seconds_into_dots():
+    import io
+    from yosnoop.desk.run import DebugOut
+    buf = io.StringIO(); d = DebugOut(buf)
+    for peak in (0.0, 0.0, 0.0001, 0.0):
+        d.level(peak, 0.006)
+    d.line("[debug] heard: 'Yo Snoop'")
+    d.level(0.15, 0.006)
+    d.level(0.0, 0.006); d.level(0.0, 0.006)
+    assert buf.getvalue() == ("[debug] mic level 0.0000  threshold 0.0060...\n"
+                              "[debug] heard: 'Yo Snoop'\n"
+                              "[debug] mic level 0.1500  threshold 0.0060\n"
+                              "[debug] mic level 0.0000  threshold 0.0060.")
+
+
+def test_debug_mic_line_still_flags_a_dead_microphone():
+    import io
+    from yosnoop.desk.run import DebugOut
+    buf = io.StringIO(); d = DebugOut(buf)
+    d.level(0.0, 0.006, dead=True)
+    assert "check microphone permission" in buf.getvalue()

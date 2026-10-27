@@ -105,6 +105,30 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     ctx.log({**entry, "outcome": outcome, "latency_s": round(time.monotonic() - t0, 2)})
 
 
+class DebugOut:
+    """--debug screen output: a quiet mic prints one level line, then a dot per quiet second on that same line."""
+
+    def __init__(self, out=sys.stdout):
+        self.out, self.dotting = out, False
+
+    def _write(self, text: str) -> None:
+        self.out.write(text); self.out.flush()
+
+    def line(self, text: str) -> None:
+        self._write(("\n" if self.dotting else "") + text + "\n"); self.dotting = False
+
+    def level(self, peak: float, threshold: float, dead: bool = False) -> None:
+        msg = f"[debug] mic level {peak:.4f}  threshold {threshold:.4f}"
+        if dead:
+            self.line(msg + "  (silence: check microphone permission)")
+        elif peak >= threshold:
+            self.line(msg)
+        elif self.dotting:
+            self._write(".")
+        else:
+            self._write(msg); self.dotting = True
+
+
 def vosk_debug_line(woke: bool, heard: str) -> str:
     return f"[debug] vosk: {'WAKE' if woke else 'no  '}  ({heard})"
 
@@ -161,8 +185,9 @@ async def _run_desk(argv: list[str]) -> int:
     vosk = make_vosk_wake()  # Snoop wakes when Vosk or Whisper hears "Yo Snoop"
     if vosk is None:
         print("Wake-word checker not installed; Snoop will miss more wakes. Run ./snoop voice-setup.")
+    dbg = DebugOut()  # answers print through it too, so they start on a fresh line after the dots
     ctx = DeskCtx(state=DeskState(), brain=brain, speaker=make_speaker(), host_name=host.display_name,
-                  log=lambda e: qlog.write(e, logdir), dry=dry)
+                  log=lambda e: qlog.write(e, logdir), dry=dry, print_fn=dbg.line if debug else print)
     loop, q = asyncio.get_running_loop(), asyncio.Queue()
 
     def on_audio(indata, frames, t, status):
@@ -181,7 +206,7 @@ async def _run_desk(argv: list[str]) -> int:
             now = time.monotonic()
             if await stop_watch_once(ctx.state, window, stop_stt.transcribe,
                                      lambda: handle_utterance(ctx, "peanut butter", now, now), now) and debug:
-                print("[debug] stop phrase heard while speaking")
+                dbg.line("[debug] stop phrase heard while speaking")
 
     tasks = set()
     refresher = None if dry else asyncio.create_task(refresh_loop())
@@ -200,8 +225,7 @@ async def _run_desk(argv: list[str]) -> int:
                 if debug:
                     level["peak"] = max(level["peak"], float(np.sqrt(np.mean(frame ** 2))))
                     if t - level["at"] >= 1.0:
-                        print(f"[debug] mic level {level['peak']:.4f}  threshold {ep.threshold():.4f}" + ("  (silence: check microphone permission)"
-                                                                          if level["peak"] == 0.0 else ""))
+                        dbg.level(level["peak"], ep.threshold(), dead=level["peak"] == 0.0)
                         level.update(peak=0.0, at=t)
                 u = ep.feed(frame, t)
                 if u is None or ctx.state.blocked(u.start):  # overlaps Snoop's voice: only the watcher listens
@@ -210,9 +234,9 @@ async def _run_desk(argv: list[str]) -> int:
                     asyncio.to_thread(stt.transcribe, u.audio),
                     asyncio.to_thread(vosk.check, u.audio) if vosk else asyncio.sleep(0, (False, "")))
                 if debug:
-                    print(f"[debug] heard: {text!r}")
+                    dbg.line(f"[debug] heard: {text!r}")
                     if vosk:
-                        print(vosk_debug_line(woke, vheard))
+                        dbg.line(vosk_debug_line(woke, vheard))
                 task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end, woke))
                 tasks.add(task); task.add_done_callback(tasks.discard)
     finally:
