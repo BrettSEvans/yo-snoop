@@ -1,5 +1,7 @@
 # Snoop Wake-Word Detector Implementation Plan
 
+> **Status: parked (2026-10-26).** Task 1's license gate failed (see findings). Brett chose to keep the lexical wake patterns and measure them first: a fresh read of `spikes/p3_script.txt`, then Jeremy and Lindsay at install. Resume this plan, with clean-license training data or Picovoice Porcupine, only if a host misses the pass bar below.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace "find 'Yo Snoop' in Whisper's transcript" with a trained on-device wake-word detector, so Desk Snoop wakes reliably for any roster member's voice, not just the mishearings seen in Brett's two script reads.

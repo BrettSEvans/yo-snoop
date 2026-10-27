@@ -50,3 +50,5 @@ The standard openWakeWord training recipe (`notebooks/automatic_model_training.i
 **Gate: FAIL.** The main negative set is non-commercial and the reverb set is unlicensed, so a model trained with the standard recipe can't ship at Saasless. No training was run.
 
 Install check: `openwakeword==0.6.0` installs and imports on Python 3.12 / numpy 2.5.4 / onnxruntime 1.31.1 (scratch venv, deleted).
+
+**Decision (Brett, 2026-10-26):** keep the lexical stopgap and measure it on more voices before training anything. The detector plan is parked.
