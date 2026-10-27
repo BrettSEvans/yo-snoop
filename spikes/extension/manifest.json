@@ -3,10 +3,32 @@
   "name": "Snoop (spike)",
   "version": "0.0.1",
   "description": "Internal Saasless spike. Meet captions out; Snoop voice and card in.",
-  "host_permissions": ["https://meet.google.com/*"],
-  "background": {"service_worker": "bridge_sw.js"},
+  "host_permissions": [
+    "https://meet.google.com/*"
+  ],
+  "background": {
+    "service_worker": "bridge_sw.js"
+  },
   "content_scripts": [
-    {"matches": ["https://meet.google.com/*"], "js": ["page_media.js"], "world": "MAIN", "run_at": "document_start"},
-    {"matches": ["https://meet.google.com/*"], "js": ["content.js"], "run_at": "document_idle"}
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "page_media.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "caption_parse.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
   ]
 }

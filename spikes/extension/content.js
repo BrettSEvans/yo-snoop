@@ -19,7 +19,15 @@ function captionRegionHTML() {
   return el ? el.outerHTML : "NO-CAPTION-REGION";
 }
 
-// Task 6 replaces this with a parser built from a captured fixture.
 function emitCaption(speaker, text) {
   port.postMessage({type: "caption", speaker, text, ts: Date.now() / 1000});
 }
+
+// Captions grow in place while someone talks: send each line whenever its text changes.
+const sent = new Map();  // block index -> last "speaker|text" sent
+new MutationObserver(() => {
+  parseCaptions(document).forEach((line, i) => {
+    const key = `${line.speaker}|${line.text}`;
+    if (sent.get(i) !== key) { sent.set(i, key); emitCaption(line.speaker, line.text); }
+  });
+}).observe(document.body, {childList: true, subtree: true, characterData: true});

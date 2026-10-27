@@ -1,0 +1,2 @@
+{"name": "snoop-spike-extension", "private": true, "type": "module",
+ "scripts": {"test": "node --test test/*.test.mjs"}, "devDependencies": {"jsdom": "25.0.1"}}
