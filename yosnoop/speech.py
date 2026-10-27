@@ -1,4 +1,6 @@
 import re
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from dataclasses import dataclass, field
 
 _SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -8,6 +10,25 @@ _PAIRED = re.compile(r"(\*\*|\*|`)(?=\S)(.+?)(?<=\S)\1")  # **bold**, *em*, `cod
 # The brain writes: a short spoken lead, then SUMMARY: (spoken on "the rest"), then DETAILS: (spoken on "full details")
 _MARKER = re.compile(r"^\s*#*\s*\**\s*(summary|details)\s*(?:\**\s*:\s*\**|:?\s*\**\s*$)\s*(.*)$", re.IGNORECASE)
 _ABBREV = re.compile(r"\b(e\.g|i\.e|vs|etc|No|approx)\.", re.IGNORECASE)
+
+
+PACIFIC = ZoneInfo("America/Los_Angeles")  # PDT or PST, whichever is in effect on that date
+_UTC_STAMP = re.compile(r"\b(?:(\d{4})-(\d{2})-(\d{2})[T ])?(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?\s*(?:Z|UTC|\+00:00)(?![\w:])")
+
+
+def pacific(text: str, now: datetime | None = None) -> str:
+    """UTC timestamps (17:10:45Z, 2026-10-27 08:10 UTC) become Pacific 12-hour times: "10:10 AM",
+    with "Oct 25," in front when it isn't today in Pacific time."""
+    now = now or datetime.now(timezone.utc)
+    today = now.astimezone(PACIFIC).date()
+
+    def conv(m):
+        y, mo, d, hh, mm = m.groups()
+        base = now.astimezone(timezone.utc) if y is None else datetime(int(y), int(mo), int(d), tzinfo=timezone.utc)
+        t = base.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0).astimezone(PACIFIC)
+        clock = f"{t.hour % 12 or 12}:{t.minute:02d} {'AM' if t.hour < 12 else 'PM'}"
+        return clock if t.date() == today else f"{t:%b} {t.day}, {clock}"
+    return _UTC_STAMP.sub(conv, text)
 
 
 @dataclass(frozen=True)
@@ -48,7 +69,7 @@ def _tiers(text: str) -> dict[str, str]:
 
 
 def shape(answer: str, clone_age_s: float) -> Shaped:
-    t = _tiers(_PB.sub("P B", answer))
+    t = _tiers(pacific(_PB.sub("P B", answer)))
     lead = sentences(t["lead"])
     spoken = ["Snoop here."] + lead[:3]
     if clone_age_s > 1800:
