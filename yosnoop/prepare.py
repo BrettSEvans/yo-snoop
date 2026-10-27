@@ -1,5 +1,5 @@
 """Host-side preparation of the brain's runtime and knowledge. Runs as the host, never as snoop."""
-import asyncio, json, os
+import asyncio, concurrent.futures, json, os
 from dataclasses import dataclass, field
 from pathlib import Path
 from yosnoop import paths
@@ -7,6 +7,16 @@ from yosnoop.runtime_sync import sync_runtime, brain_wrapper, serena_cmd as make
 from yosnoop.refresher import Refresher
 from yosnoop.bundle import build_bundle
 from yosnoop.serena_cfg import project_yml, list_tools, assert_tools
+
+
+def run_sync(coro):
+    """asyncio.run, also from inside a running loop (./snoop desk calls prepare from async code)."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    with concurrent.futures.ThreadPoolExecutor(1) as ex:
+        return ex.submit(asyncio.run, coro).result()
 
 ORIGIN = "https://github.com/Saasless-llc/Agent-C.git"
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -52,7 +62,7 @@ def prepare(dev: bool = False, sync: bool = True) -> PrepReport:
     scmd = make_serena_cmd(rt, k)
     try:
         # Host-side first run: Serena autofills project.yml (it cannot write it later as snoop) and we check its tools
-        assert_tools(asyncio.run(list_tools(["/usr/bin/env", "-i", f"HOME={os.environ['HOME']}", *scmd])))
+        assert_tools(run_sync(list_tools(["/usr/bin/env", "-i", f"HOME={os.environ['HOME']}", *scmd])))
         (k / ".serena" / "project.yml").chmod(0o644)  # Serena's atomic rewrite leaves it 0600; snoop must read it
     except Exception as e:
         errors.append(f"serena: {type(e).__name__}: {e}")
