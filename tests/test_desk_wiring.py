@@ -17,12 +17,14 @@ class Spk:
             self.said.append(s); await asyncio.sleep(self.per)
         on_end()
         return self._stop
+    async def play_clip(self, audio, rate, on_start, on_end):
+        on_start(); self.said.append("<rustle>"); await asyncio.sleep(self.per); on_end(); return False
     async def stop(self): self.stopped += 1; self._stop = True
 
-def ctx(reply, delay=0.0, per=0.0, dry=False, acks=()):  # acks=() keeps answer tests about the answer
+def ctx(reply, delay=0.0, per=0.0, dry=False, acks=(), think_gap=None):  # no acks or sounds: tests about the answer
     printed, logs = [], []
     c = DeskCtx(state=DeskState(), brain=Brain(reply, delay), speaker=Spk(per), host_name="Brett Evans",
-                log=logs.append, print_fn=printed.append, dry=dry, acks=acks)
+                log=logs.append, print_fn=printed.append, dry=dry, acks=acks, think_gap=think_gap)
     return c, printed, logs
 
 def test_question_is_answered_spoken_and_printed():
@@ -194,3 +196,17 @@ def test_follow_up_before_any_answer_goes_to_the_brain():
     c, _, _ = ctx(BrainReply(True, "Nothing yet.", 60, None))
     asyncio.run(handle_utterance(c, "Yo Snoop, tell me more", 1.0, 2.0))
     assert c.brain.asked == [("tell me more", "Brett Evans", "desk")]
+
+
+def test_thinking_sounds_play_until_the_answer_is_ready():
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), delay=0.3, acks=("Hold up.",), think_gap=(0.05, 0.05))
+    asyncio.run(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+    said = c.speaker.said
+    assert said[0] == "Hold up." and said[-2:] == ["Snoop here.", "One."]
+    assert len([x for x in said[1:-2] if x == "<rustle>" or x in ("Hmm.", "Mm, okay.", "Let's see.")]) >= 3
+
+
+def test_default_thinking_gap_is_a_few_seconds():
+    from yosnoop.desk.run import DeskCtx as D
+    from yosnoop.desk.thinking import GAP_S
+    assert D(None, None, None, "x", print).think_gap == GAP_S == (3.0, 5.0)

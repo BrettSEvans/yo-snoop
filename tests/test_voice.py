@@ -51,3 +51,19 @@ def test_missing_model_falls_back_to_mac_voice(tmp_path, capsys):
     from yosnoop.desk.speak import Speaker
     s = make_speaker(tmp_path / "nope")
     assert isinstance(s, Speaker) and "./snoop voice-setup" in capsys.readouterr().out
+
+
+def test_play_clip_plays_and_counts_as_speaking():
+    p, events = FakePlayer(), []
+    s = KokoroSpeaker(synth=synth_by_index, player=p)
+    stopped = asyncio.run(s.play_clip(np.full(10, 9.0, np.float32), 24000, lambda: events.append("start"), lambda: events.append("end")))
+    assert p.played == [9.0] and events == ["start", "end"] and stopped is False
+
+
+def test_stop_cuts_a_clip():
+    p = FakePlayer(secs=0.3)
+    s = KokoroSpeaker(synth=synth_by_index, player=p)
+    async def go():
+        t = asyncio.create_task(s.play_clip(np.zeros(10, np.float32), 24000, lambda: None, lambda: None))
+        await asyncio.sleep(0.05); await s.stop(); return await t
+    assert asyncio.run(go()) is True and p.stopped >= 1

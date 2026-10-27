@@ -46,3 +46,17 @@ def test_stop_during_say_startup_still_stops():
         await s.speak(["One.", "Two."], lambda: None, lambda: None)
     asyncio.run(go())
     assert ("terminate", "One.") in log
+
+
+def test_mac_voice_speaker_plays_clips_and_stop_cuts_them():
+    import numpy as np
+    class P:
+        def __init__(self): self.on, self.stops = False, 0
+        def play(self, audio, rate): self.on = True
+        def active(self): return self.on
+        def stop(self): self.stops += 1; self.on = False
+    p = P(); s = Speaker(player=p)
+    async def go():
+        t = asyncio.create_task(s.play_clip(np.zeros(10, np.float32), 24000, lambda: None, lambda: None))
+        await asyncio.sleep(0.05); await s.stop(); return await t
+    assert asyncio.run(go()) is True and p.stops == 1

@@ -2,8 +2,20 @@ import asyncio
 
 
 class Speaker:
-    def __init__(self, voice: str | None = None, runner=asyncio.create_subprocess_exec):
+    def __init__(self, voice: str | None = None, runner=asyncio.create_subprocess_exec, player=None):
         self.voice, self.runner, self.proc, self._stopped = voice, runner, None, False
+        self._player = player
+
+    @property
+    def player(self):  # sound effects (thinking sounds) go through sounddevice, like Snoop's own voice
+        if self._player is None:
+            from yosnoop.desk.voice import SoundDevicePlayer
+            self._player = SoundDevicePlayer()
+        return self._player
+
+    async def play_clip(self, audio, rate, on_start, on_end) -> bool:
+        from yosnoop.desk.voice import play_clip
+        return await play_clip(self, audio, rate, on_start, on_end)
 
     async def speak(self, sentences, on_start, on_end) -> bool:
         """Returns True if stop() cut the answer short."""
@@ -26,5 +38,7 @@ class Speaker:
 
     async def stop(self):
         self._stopped = True
+        if self._player is not None:
+            self._player.stop()
         if self.proc and self.proc.returncode is None:
             self.proc.terminate()
