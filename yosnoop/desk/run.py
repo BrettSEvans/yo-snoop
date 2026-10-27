@@ -4,7 +4,7 @@ from typing import Callable
 from yosnoop.desk.state import Ask, Stop
 from yosnoop.gate import gate, BLOCKED
 from yosnoop.speech import shape
-from yosnoop.desk.thinking import keep_company, GAP_S
+from yosnoop.desk.thinking import keep_company, GAPS_S
 
 EARSHOT = "Desk Snoop answers out loud. Use it only when everyone who can hear it is on the Saasless team."
 REFRESH_S = 300
@@ -40,7 +40,7 @@ class DeskCtx:
     inflight_max: int = 0
     acks: tuple = ACKS
     asked: int = 0
-    think_gap: tuple | None = GAP_S  # paper shuffles / "hmm" while the brain works; None turns them off
+    think_gap: tuple | None = GAPS_S  # paper shuffles / "hmm" while the brain works; None turns them off
     last: object = None  # the last spoken answer (speech.Shaped), for "the rest" / "full details"
 
 

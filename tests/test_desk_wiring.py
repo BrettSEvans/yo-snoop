@@ -199,7 +199,7 @@ def test_follow_up_before_any_answer_goes_to_the_brain():
 
 
 def test_thinking_sounds_play_until_the_answer_is_ready():
-    c, _, _ = ctx(BrainReply(True, "One.", 60, None), delay=0.3, acks=("Hold up.",), think_gap=(0.05, 0.05))
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), delay=0.3, acks=("Hold up.",), think_gap=(0.05,))
     asyncio.run(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
     said = c.speaker.said
     assert said[0] == "Hold up." and said[-2:] == ["Snoop here.", "One."]
@@ -208,5 +208,5 @@ def test_thinking_sounds_play_until_the_answer_is_ready():
 
 def test_default_thinking_gap_is_a_few_seconds():
     from yosnoop.desk.run import DeskCtx as D
-    from yosnoop.desk.thinking import GAP_S
-    assert D(None, None, None, "x", print).think_gap == GAP_S == (3.0, 5.0)
+    from yosnoop.desk.thinking import GAPS_S
+    assert D(None, None, None, "x", print).think_gap == GAPS_S

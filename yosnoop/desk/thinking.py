@@ -5,8 +5,12 @@ import asyncio, random
 import numpy as np
 
 MURMURS = ("Hmm.", "Mm, okay.", "Let's see.")
-GAP_S = (3.0, 5.0)  # seconds between sounds
+GAPS_S = (4.0, 5.5, 7.0, 8.5, 10.0)  # seconds before each round of sound; the gap grows, then stays at 10 s
 MURMUR_EVERY = 3     # every third sound is a murmur, the rest are paper
+STILL_WORKING_S = 20.0        # still thinking after this long: say so
+STILL_WORKING_EVERY_S = 30.0  # and again this often after that
+STILL_WORKING = ("Still digging, this one's taking a minute.", "Still on it, hang tight.",
+                 "Almost there, still looking.")
 
 
 def _band(x: np.ndarray, rate: int, lo: float, hi: float) -> np.ndarray:
@@ -52,21 +56,35 @@ def paper_rustle(rate: int = 24000, rng: random.Random | None = None) -> np.ndar
     a = 0.55 * unit(body) + 0.5 * unit(crackle) + 0.12 * unit(air) + 0.21 * unit(bass)
     fade = int(0.02 * rate)
     a[:fade] *= np.linspace(0, 1, fade); a[-fade:] *= np.linspace(1, 0, fade)
-    return (unit(a) * rng.uniform(0.08, 0.13)).astype(np.float32)
+    return (unit(a) * rng.uniform(0.048, 0.078)).astype(np.float32)
 
 
-async def keep_company(speaker, done: asyncio.Future, gap=GAP_S, on_start=lambda: None, on_end=lambda: None,
-                       still=lambda: True, rng: random.Random | None = None, rate: int = 24000) -> None:
-    """Until `done` finishes: wait a few seconds, then make one sound. Returns after the sound in progress ends.
-    `still()` false (a stop was heard) ends it at once."""
+async def keep_company(speaker, done: asyncio.Future, gaps=GAPS_S, on_start=lambda: None, on_end=lambda: None,
+                       still=lambda: True, rng: random.Random | None = None, rate: int = 24000,
+                       still_working_s: float = STILL_WORKING_S,
+                       still_working_every: float = STILL_WORKING_EVERY_S) -> None:
+    """Until `done` finishes: a sound after each gap in `gaps` (the last gap repeats), and a spoken
+    "still working" line once `still_working_s` has passed (then every `still_working_every`).
+    Returns after the sound in progress ends; `still()` false (a stop was heard) ends it at once."""
     rng = rng or random.Random()
-    count = 0
+    loop = asyncio.get_running_loop()
+    t0 = loop.time()
+    next_sound, next_status = t0 + gaps[0], t0 + still_working_s
+    rounds = said = 0
     while True:
-        await asyncio.wait({done}, timeout=rng.uniform(*gap))
+        await asyncio.wait({done}, timeout=max(0.0, min(next_sound, next_status) - loop.time()))
         if done.done() or not still():
             return
-        count += 1
-        if count % MURMUR_EVERY == 0:
+        now = loop.time()
+        if now >= next_status:
+            await speaker.speak([STILL_WORKING[said % len(STILL_WORKING)]], on_start, on_end)
+            said += 1
+            next_status = loop.time() + still_working_every
+            next_sound = max(next_sound, loop.time() + gaps[0])  # don't rustle right after speaking
+            continue
+        rounds += 1
+        if rounds % MURMUR_EVERY == 0:
             await speaker.speak([rng.choice(MURMURS)], on_start, on_end)
         else:
             await speaker.play_clip(paper_rustle(rate, rng), rate, on_start, on_end)
+        next_sound = now + gaps[min(rounds, len(gaps) - 1)]
