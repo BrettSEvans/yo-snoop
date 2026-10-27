@@ -13,7 +13,7 @@ from spikes.bridge_server import make_app, broadcast, CLIENTS
 from spikes.common import SECRETS_DIR, pdt_now
 from spikes.p2_listen import last_sentence
 from spikes.p4_media import synth_onyx, chunks
-from spikes.p7_seats import shown_as
+from spikes.p7_seats import shown_as, is_own_seat, OWN_LABEL
 from yosnoop.wake import is_wake, is_stop
 
 
@@ -29,9 +29,10 @@ async def main() -> None:
         s = last_sentence(m["text"])
         if state["talking"]:
             labels[shown_as(m["speaker"])] = labels.get(shown_as(m["speaker"]), 0) + 1
-        flag = "STOP " if is_stop(s) else "wake " if is_wake(s) else "     "
+        flag = "     " if is_own_seat(m["speaker"], OWN_LABEL) else "STOP " if is_stop(s) else "wake " if is_wake(s) else "     "
         print(pdt_now(), "[talking]" if state["talking"] else "[idle]   ", flag, repr(shown_as(m["speaker"])), "|", s[-90:])
-        if is_stop(s) and state["talking"] and state["stop_at"] is None:
+        own = is_own_seat(m["speaker"], OWN_LABEL)  # Snoop never wakes or stops on its own speech
+        if is_stop(s) and not own and state["talking"] and state["stop_at"] is None:
             state["stop_at"] = time.monotonic()
 
     app = make_app((SECRETS_DIR / "bridge-token").read_text(), on_message)
