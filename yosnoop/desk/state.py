@@ -23,7 +23,7 @@ def strip_wake(text: str) -> str:
 
 # Vosk heard "yo snoop" but Whisper wrote something else ("Your Snoop is…", "You have snipped any…"):
 # drop the opening words through the first sn…-word, if one is among the first four.
-_HEARD_PREFIX = re.compile(r"^\W*(?:\S+\s+){0,3}?sn\w*\W*", re.IGNORECASE)
+_HEARD_PREFIX = re.compile(r"^\W*(?:\S+\s+){0,3}?\S*?sn\w*\W*", re.IGNORECASE)  # "F-snip" too
 
 
 def strip_heard_wake(text: str) -> str:

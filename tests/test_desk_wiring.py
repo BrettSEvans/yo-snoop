@@ -184,7 +184,8 @@ def test_full_details_speaks_everything():
 
 def test_follow_up_phrases():
     from yosnoop.desk.run import follow_up
-    for q in ("give me the rest", "the rest", "tell me more", "keep going", "what else?", "Can you give me the rest of it?"):
+    for q in ("give me the rest", "the rest", "tell me more", "keep going", "what else?", "Can you give me the rest of it?",
+              "to me the rest", "and the rest?"):  # Whisper misheard "give" (desk run 2026-10-27)
         assert follow_up(q) == "summary", q
     for q in ("full details", "give me the full details", "all of it", "the whole answer", "tell me everything"):
         assert follow_up(q) == "details", q

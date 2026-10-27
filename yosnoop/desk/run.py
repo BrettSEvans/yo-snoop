@@ -14,8 +14,8 @@ ACKS = ("Hold up, let me check.", "One sec, I'm looking it up.", "Give me a few 
 # Follow-ups to the last answer: "the rest" speaks its summary, "full details" speaks all of it
 _DETAILS = re.compile(r"\b(?:full|all the|all of the) details\b|\bfull answer\b|\ball of it\b|\beverything\b"
                       r"|\bthe whole (?:thing|answer)\b", re.IGNORECASE)
-_REST = re.compile(r"^(?:(?:can|could) you |please )?(?:(?:give|tell) me (?:the )?(?:rest|more)|(?:the )?rest\b"
-                   r"|more\b|keep going|go on|continue|what else)", re.IGNORECASE)
+_REST = re.compile(r"\bthe rest\b|^rest\b|\b(?:give|tell) me more\b|^more\b|\bkeep going\b|\bgo on\b|^continue\b"
+                   r"|\bwhat else\b", re.IGNORECASE)  # searched, so a misheard opening ("to me the rest") still counts
 FOLLOW_UP_MAX_WORDS = 8  # "summarize what changed in the engineer skill this week" is a new question
 
 
@@ -23,7 +23,7 @@ def follow_up(question: str) -> str | None:
     q = question.strip(" .,!?")
     if len(q.split()) > FOLLOW_UP_MAX_WORDS:
         return None
-    return "details" if _DETAILS.search(q) else "summary" if _REST.match(q) else None
+    return "details" if _DETAILS.search(q) else "summary" if _REST.search(q) else None
 
 
 @dataclass

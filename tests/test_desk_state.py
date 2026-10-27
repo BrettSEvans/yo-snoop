@@ -84,3 +84,7 @@ def test_vosk_wake_still_respects_holdoff_and_stop():
 
 def test_no_vosk_wake_changes_nothing():
     assert DeskState().on_utterance("Your Snoop is the build passing", 1.0, 2.0) == []
+
+
+def test_vosk_wake_strips_a_glued_mishearing():  # desk run 2026-10-27: "F-snip is a C.I. green"
+    assert DeskState().on_utterance("F-snip is a C.I. green", 1.0, 2.0, heard_wake=True) == [Ask("is a C.I. green")]

@@ -46,9 +46,9 @@ def test_sounds_while_thinking_with_an_occasional_murmur():
 
 
 def test_gaps_grow_each_round_then_hold():
-    spk, _ = _run(0.5, gaps=(0.04, 0.08, 0.12))
-    d = np.diff(spk.times)
-    assert len(d) >= 3 and d[0] < d[1] < d[2] and abs(d[-1] - d[-2]) < 0.04
+    spk, _ = _run(1.0, gaps=(0.05, 0.15, 0.3))
+    d = np.diff(spk.times)  # expected 0.15, 0.3, 0.3; loose bounds for a busy machine
+    assert len(d) >= 3 and abs(d[0] - 0.15) < 0.07 and abs(d[1] - 0.3) < 0.1 and abs(d[2] - 0.3) < 0.1
 
 
 def test_says_it_is_still_working_after_a_while():
