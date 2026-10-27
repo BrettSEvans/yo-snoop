@@ -1,9 +1,8 @@
 import re
 from dataclasses import dataclass, field
-from yosnoop.wake import is_wake, is_stop
+from yosnoop.wake import is_wake, is_stop, WAKE_SRC
 
-_WAKE_PREFIX = re.compile(r"^\W*(?:(yo|you|yoh|yeah|yes|go)\W+(?:(go|gonna|got)\W+)?snoop(y|s)?\b|snoopy?\s*,)\W*",
-                          re.IGNORECASE)
+_WAKE_PREFIX = re.compile(WAKE_SRC + r"\W*", re.IGNORECASE)
 ARMED_S = 5.0  # "Yo Snoop" ... pause ... question: the next utterance within this window is the question
 
 

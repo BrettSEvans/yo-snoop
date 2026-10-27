@@ -53,3 +53,8 @@ def test_armed_wake_still_honors_stop():
     s = DeskState(); s.on_utterance("Yo Snoop", 1.0, 1.5)
     assert s.on_utterance("peanut butter", 2.0, 2.5) == [Stop()]
     assert s.on_utterance("anything", 3.0, 3.5) == []
+
+def test_filler_and_bare_forms_strip_to_the_question():
+    assert strip_wake("You have Snoop, which stage is it at?") == "which stage is it at?"
+    assert strip_wake("You have snooped the verify recipe pass.") == "the verify recipe pass."
+    assert strip_wake("Snoop would change in the registry MCP this week.") == "would change in the registry MCP this week."
