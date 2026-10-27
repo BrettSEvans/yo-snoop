@@ -150,6 +150,7 @@ Proposed next spike: the Snoop seat already receives the meeting audio. Pass it 
 | 15:34 (pause, informal) | 2/2 | 0/1 | not said |
 | 15:36 (pause, 5 lines) | 3/3 | 0/1 | 1/1 ("Peanut butter.") |
 | earlier, run together (3 runs) | 1-2/12 | 0/3 | 1/3 |
+| 15:36:36, one line rushed just before the paused run | 0/1 ("Go Snippets CI green!") | — | — |
 
 The question arrives as its own clean caption ("Is CI green?", "Who opened the newest PR?"). So the meeting seat uses the desk's bare-wake rule: a caption sentence that is only a wake opens a ~5 s window, and the next sentence from the same speaker is the question. "Yo Snoop, …" all in one sentence still works when Meet hears it ("Yo Snoop what's happening now?").
 
