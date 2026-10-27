@@ -1,12 +1,18 @@
 // Isolated world: relays between the service worker and page_media.js;
 // reads captions (selectors filled in by Task 6).
-const port = chrome.runtime.connect({name: "snoop-meet"});
 const TAG = "snoop-spike";
+let port = null;
 
-port.onMessage.addListener((m) => {
-  if (m.type === "dump") { port.postMessage({type: "dump", html: captionRegionHTML()}); return; }
-  window.postMessage({tag: TAG, dir: "to-page", msg: m}, location.origin);
-});
+// Reconnect when Chrome restarts the service worker (the old port disconnects).
+function connectPort() {
+  port = chrome.runtime.connect({name: "snoop-meet"});
+  port.onMessage.addListener((m) => {
+    if (m.type === "dump") { port.postMessage({type: "dump", html: captionRegionHTML()}); return; }
+    window.postMessage({tag: TAG, dir: "to-page", msg: m}, location.origin);
+  });
+  port.onDisconnect.addListener(() => setTimeout(connectPort, 1000));
+}
+connectPort();
 
 function captionRegionHTML() {
   const el = document.querySelector('[role="region"][aria-label*="aption" i]') || document.querySelector("[aria-live]");
