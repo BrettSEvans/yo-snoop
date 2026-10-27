@@ -5,7 +5,7 @@ Spec: docs/superpowers/specs/2026-10-05-yo-snoop-design.md · Plan: docs/superpo
 | Probe | Spec ref | Verdict | Evidence below | Consequence for Plans 1–2 |
 |---|---|---|---|---|
 | P1 Meet participants principal + latency | §8.1, §4 step 4 | | | |
-| P2 Caption reading in the extension + wake accuracy | §8.2, §4 step 3 | **Reading HOLDS** (live, 2026-10-27); wake accuracy not yet scored | §P2 | Meet wake detection works on caption text only (no Vosk); sentence-level, after captions settle |
+| P2 Caption reading in the extension + wake accuracy | §8.2, §4 step 3 | **Reading HOLDS; wake and stop from captions FAIL** (2026-10-27: wakes 1-2/12, stops 1/3) | §P2 | Captions carry the question; the wake and stop need the meeting audio (proposed: Vosk + stop watcher on the Mac) |
 | P3 Claude Code headless controls | §8.3, §5.3 | **PARTIAL** — Steps 1–5 HOLD; Step 6 (key helper) deferred to Plan 1 (D25) | §P3 | Plan 1 uses the SDK with `setting_sources=[]`, `strict_mcp_config`, `dontAsk`; `--max-turns` is SDK-only |
 | P4 Voice + card via extension (BlackHole fallback) | §8.4, D28, D29 | | | |
 | P5 Chat app, team group, one space | §8.5, §3.3 | | | |
@@ -120,3 +120,21 @@ Done by Brett, alone, with the Snoop seat in the Snoop Chrome profile and a seco
 Still to do for P2:
 - Step 7, the scored run with another reader, from the phone or another Mac to avoid echo.
 - Check that a turn split across a pause reads whole: the reader now joins every text piece, but this hasn't been confirmed live.
+
+### P2 phone retest (2026-10-27, 15:02-15:05 PDT)
+
+Brett spoke from his phone (a separate device, so no echo) while the Snoop seat read captions on the Mac. There were three runs of the same five lines:
+
+| Line | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| wake: is CI green | "Snoop is CI green." WAKE | "Your Snap is CI green." | "Yo Snippets, the CI green." |
+| decoy: snoop around the logs | ignored | ignored | ignored |
+| wake: how many PRs merged | "Yo, Steve, how many PR is merged?" | "You'll snip…", then "How many PR's merged?" | "Your snip?", then "How many PR's merged?" |
+| wake: who opened the newest PR | "Does Snoop who opened the newspr?" | "Nip, who opened the newest PR." | "They pull up in the newest PR." |
+| stop: peanut butter | STOP | "Una Para." | "Nut butter." |
+
+Another wake line in run 1 matched mid-sentence ("Yes, Snoop on APRs…") and then Meet rewrote it as "Some aprs are open."
+
+**Totals:** wakes 1-2/12 (bar ≥ 18/19), stops 1/3, false wakes 0/3. Meet transcribes the **question** well but not "Yo Snoop" or "peanut butter". **Verdict: wake and stop from caption text FAIL.**
+
+Proposed next spike: the Snoop seat already receives the meeting audio. Pass it from the extension to the host's Mac, in memory and never saved, and run the desk's wake and stop checks on it: Vosk ("yo snoop", 19/19 on Brett at the desk) and the "peanut butter" watcher. Captions still supply the question's words. This amends D8 (speech in), and needs Brett's go.
