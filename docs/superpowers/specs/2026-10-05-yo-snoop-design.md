@@ -65,6 +65,7 @@ participant is present, and passes every negative control in §9.
 | D39 | **Key containment (2026-10-09, review defect 3):** the API key is passed only to the Claude CLI process; every MCP server is launched through `/usr/bin/env -u ANTHROPIC_API_KEY …` so Serena, its language servers and registry-mcp never inherit it. `--dev` runs with the same path-scoped tools, refuses to start while a Meet room is live (Phase 1b), and prints a warning on every start. |
 | D40 | **Setup hardening (2026-10-09, review defects 5, 10b–d):** setup refuses if `/Users/Shared/snoop` already exists and is not a real directory owned by the host; it never recurses with `chown -R`/`chmod -R` over pre-existing content; sudoers adds `Defaults>snoop always_set_home`; the brain wrapper sets `HOME=/Users/snoop` and its working directory explicitly. |
 | D41 | **Room check fails closed on an empty list (2026-10-09, review defect 1, Phase 1b):** zero active conference records, or zero participants other than the host's own seat, is **mixed**; both list calls paginate. |
+| D42 | **Meeting voice is Kokoro "Onyx" on the host's Mac (Brett, 2026-10-27; amends D8, D36):** the same on-device voice as Desk Snoop. Answer text is never sent to a speech service, and Google Cloud Text-to-Speech is not enabled. Revisit only if Onyx audio can't get into Meet cleanly (Plan 0 P4). |
 
 ## 3. Components
 

@@ -15,7 +15,7 @@ def main():
     (SECRETS_DIR / "bridge-token").write_text(token); (SECRETS_DIR / "bridge-token").chmod(0o600)
     p = Path("spikes/extension/config.local.json")
     p.write_text(json.dumps({"port": a.port, "token": token, "host_display_name": member.display_name}))
-    p.chmod(0o600)
+    p.chmod(0o644)  # Chrome would not load it at 0600 (2026-10-27); the host's home folder is 0700 anyway
     print("wrote config; token sha", sha_prefix(token), "card", f"Snoop ({member.display_name})")
 
 if __name__ == "__main__":

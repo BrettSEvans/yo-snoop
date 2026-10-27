@@ -14,6 +14,9 @@ async function connect() {
   ws.onclose = () => { ws = null; setTimeout(connect, 2000); };
 }
 
+// Chrome stops an idle service worker after ~30 s; WebSocket traffic keeps it alive (Chrome 116+).
+setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({type: "ping"})); }, 20000);
+
 chrome.runtime.onConnect.addListener((p) => {
   if (p.name !== "snoop-meet") return;
   port = p;
