@@ -3,7 +3,7 @@ The capture holds real names and words: build the sanitized fixture from it, the
 import asyncio, time
 from pathlib import Path
 from aiohttp import web
-from spikes.bridge_server import make_app, broadcast
+from spikes.bridge_server import make_app, broadcast, CLIENTS
 from spikes.common import SECRETS_DIR, pdt_now
 
 OUT = Path.home() / ".cache" / "snoop"
@@ -23,9 +23,23 @@ async def main():
     app = make_app((SECRETS_DIR / "bridge-token").read_text(), on_message)
     runner = web.AppRunner(app); await runner.setup()
     await web.TCPSite(runner, "127.0.0.1", 8790).start()
-    print("Listening on 127.0.0.1:8790. Speak a few lines with captions on, then press Enter to save the caption area.")
+    print("Listening on 127.0.0.1:8790. Waiting for the Snoop extension in a Meet tab…")
+
+    async def watch():  # say when the extension connects or drops
+        last = -1
+        while True:
+            n = len(app[CLIENTS])
+            if n != last:
+                print(pdt_now(), f"extension connected ({n} Meet tab)" if n else "no extension connected yet: "
+                      "open the meeting in the Snoop Chrome profile, with Snoop (spike) loaded, and reload the tab")
+                last = n
+            await asyncio.sleep(1)
+    asyncio.create_task(watch())
+    print("Speak a few lines with captions (CC) on, then press Enter here to save the caption area.")
     while True:
         await asyncio.get_running_loop().run_in_executor(None, input)
+        n = len(app[CLIENTS])
+        print(pdt_now(), f"asking {n} Meet tab(s) for the caption area…" if n else "nothing to ask: no extension connected")
         await broadcast(app, {"type": "dump"})
 
 asyncio.run(main())
