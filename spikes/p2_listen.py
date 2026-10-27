@@ -1,9 +1,9 @@
 """Print and log caption events from the extension with receipt time and wake/stop flags (Plan 0 Task 6).
 The log holds real names and words: it lives in ~/.cache/snoop and is deleted once numbers are in findings."""
-import asyncio, json, re, time
+import asyncio, json, re, sys, time
 from pathlib import Path
 from aiohttp import web
-from spikes.bridge_server import make_app
+from spikes.bridge_server import make_app, broadcast
 from spikes.common import SECRETS_DIR, pdt_now
 from yosnoop.wake import is_wake, is_stop
 
@@ -17,6 +17,11 @@ def last_sentence(text: str) -> str:
 
 
 def on_message(m):
+    if m.get("type") == "dump":
+        path = LOG.parent / f"snoop-caption-dom-{int(time.time())}.html"
+        path.write_text(m["html"]); path.chmod(0o600)
+        print(pdt_now(), "saved caption area to", path)
+        return
     if m.get("type") != "caption":
         return
     now = last_sentence(m["text"])
@@ -33,8 +38,12 @@ async def main():
     app = make_app((SECRETS_DIR / "bridge-token").read_text(), on_message)
     runner = web.AppRunner(app); await runner.setup()
     await web.TCPSite(runner, "127.0.0.1", 8790).start()
-    print("Listening for captions on 127.0.0.1:8790 (Ctrl-C quits).")
-    await asyncio.Future()
+    print("Listening for captions on 127.0.0.1:8790. Enter saves the caption area (for debugging); Ctrl-C quits.")
+    enter = asyncio.Queue()
+    asyncio.get_running_loop().add_reader(sys.stdin, lambda: (sys.stdin.readline(), enter.put_nowait(1)))
+    while True:
+        await enter.get()
+        await broadcast(app, {"type": "dump"})
 
 try:
     asyncio.run(main())

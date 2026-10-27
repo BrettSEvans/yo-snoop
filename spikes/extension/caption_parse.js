@@ -14,7 +14,8 @@ function parseCaptions(root) {
   const out = [];
   for (const block of region.querySelectorAll(CAPTION_BLOCK)) {
     const speaker = block.querySelector(SPEAKER)?.textContent.trim() ?? "";
-    const text = block.querySelector(TEXT)?.textContent.trim() ?? "";
+    // a turn can hold several text pieces (e.g. after a pause): read them all, in order
+    const text = [...block.querySelectorAll(TEXT)].map((t) => t.textContent.trim()).filter(Boolean).join(" ");
     if (text) out.push({speaker, text});
   }
   return out;

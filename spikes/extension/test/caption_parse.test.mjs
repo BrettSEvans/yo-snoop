@@ -21,3 +21,10 @@ test("no caption region gives no lines", () => {
   const dom = new JSDOM("<div>nothing here</div>");
   assert.deepEqual(parseCaptions(dom.window.document.body), []);
 });
+
+test("a turn split into several text pieces is read whole", () => {
+  const html = readFileSync(new URL("./fixture_captions.html", import.meta.url), "utf8")
+    .replace("yo snoop how many prs merged</div>", 'yo</div><div class="ygicle VbkSUe">snoop how many prs merged</div>');
+  const lines = parseCaptions(new JSDOM(html).window.document.body);
+  assert.equal(lines[0].text, "yo snoop how many prs merged");
+});
