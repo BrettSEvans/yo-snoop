@@ -3,10 +3,16 @@ import re
 from spikes.roster import Roster
 
 _SNOOP_HERE = re.compile(r"^\W*snoop\W+here\b", re.IGNORECASE)
+OWN_LABEL = "You"  # Meet's caption label for the seat's own speech (P6, 2026-10-27: 165/165 lines)
 
 
 def is_own_seat(speaker: str, own_label: str) -> bool:
     return speaker == own_label
+
+
+def shown_as(speaker: str) -> str:
+    """The name we print: the seat's own speech is Snoop, not Meet's "You"."""
+    return "Snoop" if is_own_seat(speaker, OWN_LABEL) else speaker
 
 
 def stand_down(my_email: str, speaker: str, text: str, roster: Roster) -> bool:

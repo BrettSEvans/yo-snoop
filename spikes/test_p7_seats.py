@@ -23,3 +23,8 @@ def test_ordinary_speech_never_triggers_stand_down():
 
 def test_non_roster_speaker_never_triggers_stand_down():
     assert not stand_down("jeremy@startup.ai", "Some Guest", "Snoop here, hi", R)
+
+
+def test_own_seat_is_shown_as_snoop():
+    from spikes.p7_seats import shown_as
+    assert shown_as("You") == "Snoop" and shown_as("Brett Evans") == "Brett Evans"
