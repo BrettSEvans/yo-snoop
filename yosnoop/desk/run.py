@@ -1,12 +1,29 @@
-import asyncio, sys, time
+import asyncio, re, sys, time
 from dataclasses import dataclass, field
 from typing import Callable
 from yosnoop.desk.state import Ask, Stop
 from yosnoop.gate import gate, BLOCKED
 from yosnoop.speech import shape
+from yosnoop.desk.thinking import keep_company, GAPS_S
 
 EARSHOT = "Desk Snoop answers out loud. Use it only when everyone who can hear it is on the Saasless team."
 REFRESH_S = 300
+# Said as soon as a question is heard, while the brain looks it up (5-8 s); rotated per question
+ACKS = ("Hold up, let me check.", "One sec, I'm looking it up.", "Give me a few seconds, I'm on it.",
+        "Aight, let me find that.")
+# Follow-ups to the last answer: "the rest" speaks its summary, "full details" speaks all of it
+_DETAILS = re.compile(r"\b(?:full|all the|all of the) details\b|\bfull answer\b|\ball of it\b|\beverything\b"
+                      r"|\bthe whole (?:thing|answer)\b", re.IGNORECASE)
+_REST = re.compile(r"\bthe rest\b|^rest\b|\b(?:give|tell) me more\b|^more\b|\bkeep going\b|\bgo on\b|^continue\b"
+                   r"|\bwhat else\b", re.IGNORECASE)  # searched, so a misheard opening ("to me the rest") still counts
+FOLLOW_UP_MAX_WORDS = 8  # "summarize what changed in the engineer skill this week" is a new question
+
+
+def follow_up(question: str) -> str | None:
+    q = question.strip(" .,!?")
+    if len(q.split()) > FOLLOW_UP_MAX_WORDS:
+        return None
+    return "details" if _DETAILS.search(q) else "summary" if _REST.search(q) else None
 
 
 @dataclass
@@ -21,11 +38,16 @@ class DeskCtx:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     inflight: int = 0
     inflight_max: int = 0
+    acks: tuple = ACKS
+    asked: int = 0
+    think_gap: tuple | None = GAPS_S  # paper shuffles / "hmm" while the brain works; None turns them off
+    last: object = None  # the last spoken answer (speech.Shaped), for "the rest" / "full details"
 
 
-async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float) -> None:
-    """Callers run this as its own task per utterance, so a stop is heard while an answer is spoken."""
-    for a in ctx.state.on_utterance(text, start, end):
+async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float, heard_wake: bool = False) -> None:
+    """Callers run this as its own task per utterance, so a stop is heard while an answer is spoken.
+    heard_wake: Vosk heard "yo snoop"; it wakes Snoop even when Whisper's words miss the wake patterns."""
+    for a in ctx.state.on_utterance(text, start, end, heard_wake):
         if isinstance(a, Stop):
             if ctx.dry:
                 ctx.print_fn("[dry] STOP")
@@ -47,9 +69,21 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     question = ask.question
     t0 = time.monotonic()
     entry = {"ts": time.time(), "asker": ctx.host_name, "room": "desk", "question": question}
-    reply = await ctx.brain.ask(question, ctx.host_name, "desk")
     on_start = lambda: ctx.state.speaking_started(time.monotonic())
     on_end = lambda: ctx.state.speaking_ended(time.monotonic())
+    tier = follow_up(question) if ctx.last else None
+    if tier:
+        cut = await ctx.speaker.speak(getattr(ctx.last, tier) or ["That's all I've got."], on_start, on_end)
+        ctx.log({**entry, "outcome": "stopped" if cut else "spoken", "latency_s": round(time.monotonic() - t0, 2)})
+        return
+    pending = asyncio.create_task(ctx.brain.ask(question, ctx.host_name, "desk"))
+    if ctx.acks and ctx.state.stops == ask.stop_seq:
+        await ctx.speaker.speak([ctx.acks[ctx.asked % len(ctx.acks)]], on_start, on_end)
+    ctx.asked += 1
+    if ctx.think_gap:
+        await keep_company(ctx.speaker, pending, ctx.think_gap, on_start, on_end,
+                           still=lambda: ctx.state.stops == ask.stop_seq)
+    reply = await pending
     if ctx.state.stops != ask.stop_seq:  # "peanut butter" since this was asked: say nothing
         outcome = "stopped"
     elif not reply.ok:
@@ -59,15 +93,44 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     else:
         s = shape(reply.text, reply.clone_age_s)
         # gate the raw answer and exactly what will be printed and spoken (markdown removal can rejoin a key)
-        if not all(gate(t).allowed for t in (reply.text, s.full, " ".join(s.spoken))):
+        if not all(gate(t).allowed for t in (reply.text, s.full, *(" ".join(x) for x in (s.spoken, s.summary, s.details)))):
             await ctx.speaker.speak([BLOCKED], on_start, on_end); outcome = "blocked"
         else:
             ctx.print_fn(f"\n[Snoop → {ctx.host_name}] {s.full}")
+            ctx.last = s
             cut = await ctx.speaker.speak(s.spoken, on_start, on_end)
             if cut:
                 ctx.print_fn("(stopped)")
             outcome = "stopped" if cut else "spoken"
     ctx.log({**entry, "outcome": outcome, "latency_s": round(time.monotonic() - t0, 2)})
+
+
+class DebugOut:
+    """--debug screen output: a quiet mic prints one level line, then a dot per quiet second on that same line."""
+
+    def __init__(self, out=sys.stdout):
+        self.out, self.dotting = out, False
+
+    def _write(self, text: str) -> None:
+        self.out.write(text); self.out.flush()
+
+    def line(self, text: str) -> None:
+        self._write(("\n" if self.dotting else "") + text + "\n"); self.dotting = False
+
+    def level(self, peak: float, threshold: float, dead: bool = False) -> None:
+        msg = f"[debug] mic level {peak:.4f}  threshold {threshold:.4f}"
+        if dead:
+            self.line(msg + "  (silence: check microphone permission)")
+        elif peak >= threshold:
+            self.line(msg)
+        elif self.dotting:
+            self._write(".")
+        else:
+            self._write(msg); self.dotting = True
+
+
+def vosk_debug_line(woke: bool, heard: str) -> str:
+    return f"[debug] vosk: {'WAKE' if woke else 'no  '}  ({heard})"
 
 
 def run_desk(argv: list[str]) -> int:
@@ -118,8 +181,13 @@ async def _run_desk(argv: list[str]) -> int:
         await brain.start()
     print("Loading speech recognition and Snoop's voice…")
     stt, stop_stt = Transcriber(), Transcriber(STOP_MODEL)
+    from yosnoop.desk.vosk_wake import make_vosk_wake
+    vosk = make_vosk_wake()  # Snoop wakes when Vosk or Whisper hears "Yo Snoop"
+    if vosk is None:
+        print("Wake-word checker not installed; Snoop will miss more wakes. Run ./snoop voice-setup.")
+    dbg = DebugOut()  # answers print through it too, so they start on a fresh line after the dots
     ctx = DeskCtx(state=DeskState(), brain=brain, speaker=make_speaker(), host_name=host.display_name,
-                  log=lambda e: qlog.write(e, logdir), dry=dry)
+                  log=lambda e: qlog.write(e, logdir), dry=dry, print_fn=dbg.line if debug else print)
     loop, q = asyncio.get_running_loop(), asyncio.Queue()
 
     def on_audio(indata, frames, t, status):
@@ -138,7 +206,7 @@ async def _run_desk(argv: list[str]) -> int:
             now = time.monotonic()
             if await stop_watch_once(ctx.state, window, stop_stt.transcribe,
                                      lambda: handle_utterance(ctx, "peanut butter", now, now), now) and debug:
-                print("[debug] stop phrase heard while speaking")
+                dbg.line("[debug] stop phrase heard while speaking")
 
     tasks = set()
     refresher = None if dry else asyncio.create_task(refresh_loop())
@@ -157,16 +225,19 @@ async def _run_desk(argv: list[str]) -> int:
                 if debug:
                     level["peak"] = max(level["peak"], float(np.sqrt(np.mean(frame ** 2))))
                     if t - level["at"] >= 1.0:
-                        print(f"[debug] mic level {level['peak']:.4f}  threshold {ep.threshold():.4f}" + ("  (silence: check microphone permission)"
-                                                                          if level["peak"] == 0.0 else ""))
+                        dbg.level(level["peak"], ep.threshold(), dead=level["peak"] == 0.0)
                         level.update(peak=0.0, at=t)
                 u = ep.feed(frame, t)
                 if u is None or ctx.state.blocked(u.start):  # overlaps Snoop's voice: only the watcher listens
                     continue
-                text = await asyncio.to_thread(stt.transcribe, u.audio)
+                text, (woke, vheard) = await asyncio.gather(
+                    asyncio.to_thread(stt.transcribe, u.audio),
+                    asyncio.to_thread(vosk.check, u.audio) if vosk else asyncio.sleep(0, (False, "")))
                 if debug:
-                    print(f"[debug] heard: {text!r}")
-                task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end))
+                    dbg.line(f"[debug] heard: {text!r}")
+                    if vosk:
+                        dbg.line(vosk_debug_line(woke, vheard))
+                task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end, woke))
                 tasks.add(task); task.add_done_callback(tasks.discard)
     finally:
         watcher.cancel()

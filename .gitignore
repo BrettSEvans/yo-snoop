@@ -15,3 +15,6 @@ spikes/extension/node_modules/
 
 # Kokoro voice model (~330 MB; too big for GitHub) — fetched by ./snoop voice-setup
 models/kokoro/
+
+# Vosk wake-word checker model (~40 MB) — fetched by ./snoop voice-setup
+models/vosk/

@@ -57,4 +57,8 @@ Deviation from the runbook: the key was first typed at the zsh prompt instead of
 |---|---|---|---|---|---|
 | 1 | `f3ab3ea` (main) | 9/19 FAIL | 0/10 | yes | Mic speech 0.016–0.035 vs threshold 0.015 clipped starts; "Yes Snoop", "You go/gonna Snoop"; pause after "Yo Snoop" split the question off |
 | 2 | `c702540` | 12/19 FAIL | 0/10 | yes | Louder mic (0.1–0.2). New mishearings: "You have Snoop", "No Snoop", "You don't snoop", "You have snooped"; line 28 lost "Yo Snoop" entirely |
-| replay of 1 and 2 through `2fef73a` patterns | — | 17/19 and 18/19 | 0/10 | yes | Lexical stopgap. Next: trained wake-word detector (`docs/superpowers/plans/2026-10-26-wake-word-detector.md`) |
+| replay of 1 and 2 through `2fef73a` patterns | — | 17/19 and 18/19 | 0/10 | yes | Lexical stopgap. Detector plan parked after its license gate failed |
+| 3: fresh lines, `spikes/p3_script.txt` | `87d4019` | 14/19 FAIL | 0/10 | yes | Misses: "You'll Snoop", "Your Snoop", "Good Snoop", bare "Snoop" then a pause, "Snoop emerged" ("who merged"). Whisper often drops "Yo" ("Snoop, …" still wakes). Lexical patterns don't generalize to unseen lines |
+| 4: `spikes/p3_script.txt`, side by side (2026-10-27) | `1152b7d` | Whisper 17/19 FAIL; **Vosk 19/19** | Whisper 0/10; **Vosk 1/10 FAIL** ("he was snooping around the kitchen" → yo(1.00) snoop(1.00)) | yes | Whisper misses: "Your Snoop", "You have snipped". One off-script utterance ("You know Snoop, did you?") not scored; Vosk woke on it |
+| Jeremy, `spikes/p3_script.txt` | | /19 | /10 | | at install |
+| Lindsay, `spikes/p3_script.txt` | | /19 | /10 | | at install |

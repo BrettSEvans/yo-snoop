@@ -59,6 +59,19 @@ def kokoro_synth(model_dir: Path = MODEL_DIR, voice: str = DEFAULT_VOICE):
     return synth
 
 
+async def play_clip(owner, audio, rate, on_start, on_end) -> bool:
+    """Play a sound effect through owner.player; owner.stop() cuts it. Returns True if cut."""
+    owner._stopped = False
+    on_start()
+    try:
+        owner.player.play(audio, rate)
+        while owner.player.active() and not owner._stopped:
+            await asyncio.sleep(0.03)
+    finally:
+        on_end()
+    return owner._stopped
+
+
 class KokoroSpeaker:
     """Same contract as desk.speak.Speaker: speak() returns True when stop() cut it short."""
 
@@ -81,6 +94,9 @@ class KokoroSpeaker:
         finally:
             on_end()
         return self._stopped
+
+    async def play_clip(self, audio, rate, on_start, on_end) -> bool:
+        return await play_clip(self, audio, rate, on_start, on_end)
 
     async def stop(self):
         self._stopped = True

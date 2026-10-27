@@ -1,0 +1,32 @@
+# Desk session: read it like a normal morning at your desk, not a test.
+# Lines in [brackets] are directions; don't say them. Wait for Snoop to finish
+# answering before the next line unless a direction says otherwise.
+
+okay, coffee's done, let's see where things are
+Yo Snoop, what merged since yesterday?
+huh, more than I thought
+Yo Snoop, are there any open PRs waiting on review?
+[wait for the answer]
+alright, I'll look at those after standup
+Yo Snoop
+[pause about two seconds]
+is CI green on the main branch?
+good, good
+I need to snoop through the backlog later, it's getting long
+Yo Snoop, how many backlog items are open right now?
+[while Snoop is answering, say:] peanut butter
+sorry, didn't need all that
+Yo Snoop, which stage is the newest project at?
+hmm, let me think about that one
+you know, the old dashboard had that info somewhere
+Yo Snoop, what does the QA stage check before handing off?
+nice, that's what I figured
+I'm not going to snoop around in the registry code today
+Yo Snoop, who opened the most recent pull request?
+okay
+Yo Snoop, summarize what changed in the engineer skill this week
+[wait for the answer]
+that's a lot of changes
+Yo Snoop, is there anything blocking the version two branch?
+[while Snoop is answering, say:] peanut butter
+alright, that's enough for now, back to work

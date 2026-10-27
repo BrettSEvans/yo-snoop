@@ -33,3 +33,42 @@ What building the brain (Plan 1) and Desk Snoop (Plan 2) found that the plans di
 
 - Real-voice wake accuracy (≥ 18/20, 0/10 decoys) and "peanut butter" stop by ear (Plan 2 Task 6 Steps 4–5; rehearsal D6–D8).
 - `./snoop doctor` brain-turn controls as `snoop` (needs the Snoop API key in the Keychain).
+
+## Wake-word gate (2026-10-26, wake-word plan Task 1)
+
+The standard openWakeWord training recipe (`notebooks/automatic_model_training.ipynb`) pulls these inputs:
+
+| Input | Role | License |
+|---|---|---|
+| openWakeWord code, `melspectrogram.onnx`, `embedding_model.onnx` | library + frozen feature models | Apache-2.0 |
+| `rhasspy/piper-sample-generator` + `en_US-libritts_r-medium.pt` | synthetic "Yo Snoop" clips | MIT (generator); voice trained on LibriTTS-R (CC BY 4.0) |
+| `davidscripka/openwakeword_features` (ACAV100M ~2,000 h features + false-positive validation set) | main negative data | **CC BY-NC-SA 4.0** |
+| `davidscripka/MIT_environmental_impulse_responses` | room reverb | **unknown** |
+| `rudraml/fma` (small) | background music | openrail (underlying FMA tracks carry mixed CC licenses) |
+| `agkphysics/AudioSet` | background noise | CC BY 4.0 (card); audio originates on YouTube |
+
+**Gate: FAIL.** The main negative set is non-commercial and the reverb set is unlicensed, so a model trained with the standard recipe can't ship at Saasless. No training was run.
+
+Install check: `openwakeword==0.6.0` installs and imports on Python 3.12 / numpy 2.5.4 / onnxruntime 1.31.1 (scratch venv, deleted).
+
+**Decision (Brett, 2026-10-26):** keep the lexical stopgap and measure it on more voices before training anything. The detector plan is parked.
+
+## Wake spike: phrase-list recognizers (2026-10-26)
+
+After read 3 (14/19 on fresh lines) Brett asked for a free, already-trained detector.
+
+- **sherpa-onnx keyword spotter:** license gate FAIL. The English model (`sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01`) states no license and is trained on GigaSpeech, whose terms limit use to "non-commercial research and educational purposes" and bind the user's employer. Not downloaded.
+- **Vosk, grammar mode:** license gate PASS (`vosk-model-small-en-us-0.15`, 40 MB, Apache 2.0 on alphacephei.com/vosk/models). Grammar `["yo snoop", "[unk]"]`; wake when the first decoded words are "yo snoop", each word's confidence ≥ 0.6, with at most 0.2 s of `[unk]` before them.
+
+Same audio for both (8 Mac `say` voices × `p2_script.txt` + `p3_script.txt`, wake and decoy lines; scratch in `~/.cache/snoop/vosk-spike`, nothing in the repo):
+
+| Wake check | Wakes | Decoys woke |
+|---|---|---|
+| Whisper small.en + lexical patterns (today's desk) | 244/304 (80%) | 2/160 |
+| Vosk grammar, conf ≥ 0.6, ≤ 0.2 s before | 291/304 (96%) | 1/160 ("we don't snoop on people here", one voice) |
+
+Without the "nothing much before it" rule, "I said yo snoop earlier" woke it in every voice. Synthetic voices only: Brett's real voice is the test that counts.
+
+With the desk's 0.6 s of pre-roll silence in front of each clip (as `./snoop desk` feeds it), Vosk scores 303/304 wakes but 5/160 decoys: "don't snoop" (3 voices), "we don't snoop…" and "the Snoopy cartoon" decode as "yo snoop". `./snoop desk --debug` now prints Vosk's verdict under Whisper's for each utterance (it doesn't change what Snoop does), so one live read scores both.
+
+**Decision (Brett, 2026-10-27):** Snoop wakes when Vosk **or** Whisper's wake patterns hear "Yo Snoop". When only Vosk heard it, the question is Whisper's text with its opening words dropped through the first "sn…" word (within the first four words). Replaying read 4: 19/19 wakes, 1/10 false wakes ("He was snipping around the kitchen" → asks "around the kitchen"), accepted as a rare stray answer.

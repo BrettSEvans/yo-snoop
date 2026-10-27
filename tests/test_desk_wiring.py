@@ -17,12 +17,14 @@ class Spk:
             self.said.append(s); await asyncio.sleep(self.per)
         on_end()
         return self._stop
+    async def play_clip(self, audio, rate, on_start, on_end):
+        on_start(); self.said.append("<rustle>"); await asyncio.sleep(self.per); on_end(); return False
     async def stop(self): self.stopped += 1; self._stop = True
 
-def ctx(reply, delay=0.0, per=0.0, dry=False):
+def ctx(reply, delay=0.0, per=0.0, dry=False, acks=(), think_gap=None):  # no acks or sounds: tests about the answer
     printed, logs = [], []
     c = DeskCtx(state=DeskState(), brain=Brain(reply, delay), speaker=Spk(per), host_name="Brett Evans",
-                log=logs.append, print_fn=printed.append, dry=dry)
+                log=logs.append, print_fn=printed.append, dry=dry, acks=acks, think_gap=think_gap)
     return c, printed, logs
 
 def test_question_is_answered_spoken_and_printed():
@@ -104,3 +106,131 @@ def test_key_rejoined_by_markdown_removal_is_blocked():
     c, printed, _ = ctx(BrainReply(True, "Here: gh**p_" + "Q" * 36 + "**", 60, None))
     asyncio.run(handle_utterance(c, "Yo Snoop, key?", 1.0, 2.0))
     assert c.speaker.said == ["Snoop here, can't share that one."] and printed == []
+
+
+def test_vosk_debug_line_shows_its_verdict():
+    from yosnoop.desk.run import vosk_debug_line
+    assert vosk_debug_line(True, "yo(1.00) snoop(0.98)") == "[debug] vosk: WAKE  (yo(1.00) snoop(0.98))"
+    assert vosk_debug_line(False, "yo(1.00) snoop(0.98)") == "[debug] vosk: no    (yo(1.00) snoop(0.98))"
+
+
+def test_vosk_wake_reaches_the_state_machine():
+    out = []
+    ctx = DeskCtx(state=DeskState(), brain=None, speaker=None, host_name="Brett Evans", log=lambda e: None,
+                  print_fn=out.append, dry=True)
+    asyncio.run(handle_utterance(ctx, "Your Snoop is the build passing", 1.0, 2.0, heard_wake=True))
+    assert out == ["[dry] WAKE: is the build passing"]
+
+
+def test_acknowledges_right_away_while_the_brain_thinks():
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), delay=0.05, acks=("Hold up.", "One sec."))
+    import time
+    later = time.monotonic() + 100  # past the self-voice hold-off, which runs on the real clock
+    asyncio.run(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+    asyncio.run(handle_utterance(c, "Yo Snoop, PRs?", later, later + 1))
+    assert c.speaker.said == ["Hold up.", "Snoop here.", "One.", "One sec.", "Snoop here.", "One."]
+
+
+def test_brain_is_asked_before_the_acknowledgement_finishes():
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), per=0.05, acks=("Hold up.",))
+    async def go():
+        t = asyncio.create_task(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+        await asyncio.sleep(0.02)
+        assert c.speaker.said == ["Hold up."] and c.brain.asked == [("CI?", "Brett Evans", "desk")]
+        await t
+    asyncio.run(go())
+
+
+def test_stop_during_acknowledgement_cancels_the_answer():
+    c, _, logs = ctx(BrainReply(True, "One.", 60, None), delay=0.1, per=0.05, acks=("Hold up.",))
+    async def go():
+        t = asyncio.create_task(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+        await asyncio.sleep(0.02)
+        await handle_utterance(c, "peanut butter", 2.1, 2.5)
+        await t
+    asyncio.run(go())
+    assert c.speaker.said == ["Hold up."] and logs[0]["outcome"] == "stopped"
+
+
+def test_default_acknowledgements_are_short_and_never_the_stop_phrase():
+    from yosnoop.desk.run import ACKS
+    assert len(ACKS) >= 3 and all(len(a.split()) <= 8 and "peanut" not in a.lower() for a in ACKS)
+
+
+TIERED = "Five merged. None passed. Newest is 712.\nSUMMARY:\nSum one. Sum two.\nDETAILS:\nDet one. Det two. Det three."
+
+
+def _later():
+    import time
+    return time.monotonic() + 100  # past the self-voice hold-off, which runs on the real clock
+
+
+def test_the_rest_speaks_the_summary_without_asking_the_brain_again():
+    c, _, logs = ctx(BrainReply(True, TIERED, 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, what merged?", 1.0, 2.0))
+    t = _later()
+    asyncio.run(handle_utterance(c, "Yo Snoop, give me the rest", t, t + 1))
+    assert c.speaker.said[-2:] == ["Sum one.", "Sum two."] and len(c.brain.asked) == 1
+    assert logs[-1]["outcome"] == "spoken" and logs[-1]["question"] == "give me the rest"
+
+
+def test_full_details_speaks_everything():
+    c, _, _ = ctx(BrainReply(True, TIERED, 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, what merged?", 1.0, 2.0))
+    t = _later()
+    asyncio.run(handle_utterance(c, "Yo Snoop, full details please", t, t + 1))
+    assert c.speaker.said[-3:] == ["Det one.", "Det two.", "Det three."] and len(c.brain.asked) == 1
+
+
+def test_follow_up_phrases():
+    from yosnoop.desk.run import follow_up
+    for q in ("give me the rest", "the rest", "tell me more", "keep going", "what else?", "Can you give me the rest of it?",
+              "to me the rest", "and the rest?"):  # Whisper misheard "give" (desk run 2026-10-27)
+        assert follow_up(q) == "summary", q
+    for q in ("full details", "give me the full details", "all of it", "the whole answer", "tell me everything"):
+        assert follow_up(q) == "details", q
+    for q in ("summarize what changed in the engineer skill this week", "is CI green", "how many more PRs are open on main"):
+        assert follow_up(q) is None, q
+
+
+def test_follow_up_before_any_answer_goes_to_the_brain():
+    c, _, _ = ctx(BrainReply(True, "Nothing yet.", 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, tell me more", 1.0, 2.0))
+    assert c.brain.asked == [("tell me more", "Brett Evans", "desk")]
+
+
+def test_thinking_sounds_play_until_the_answer_is_ready():
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), delay=0.3, acks=("Hold up.",), think_gap=(0.05,))
+    asyncio.run(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+    said = c.speaker.said
+    assert said[0] == "Hold up." and said[-2:] == ["Snoop here.", "One."]
+    assert len([x for x in said[1:-2] if x == "<rustle>" or x in ("Hmm.", "Mm, okay.", "Let's see.")]) >= 3
+
+
+def test_default_thinking_gap_is_a_few_seconds():
+    from yosnoop.desk.run import DeskCtx as D
+    from yosnoop.desk.thinking import GAPS_S
+    assert D(None, None, None, "x", print).think_gap == GAPS_S
+
+
+def test_debug_mic_line_turns_quiet_seconds_into_dots():
+    import io
+    from yosnoop.desk.run import DebugOut
+    buf = io.StringIO(); d = DebugOut(buf)
+    for peak in (0.0, 0.0, 0.0001, 0.0):
+        d.level(peak, 0.006)
+    d.line("[debug] heard: 'Yo Snoop'")
+    d.level(0.15, 0.006)
+    d.level(0.0, 0.006); d.level(0.0, 0.006)
+    assert buf.getvalue() == ("[debug] mic level 0.0000  threshold 0.0060...\n"
+                              "[debug] heard: 'Yo Snoop'\n"
+                              "[debug] mic level 0.1500  threshold 0.0060\n"
+                              "[debug] mic level 0.0000  threshold 0.0060.")
+
+
+def test_debug_mic_line_still_flags_a_dead_microphone():
+    import io
+    from yosnoop.desk.run import DebugOut
+    buf = io.StringIO(); d = DebugOut(buf)
+    d.level(0.0, 0.006, dead=True)
+    assert "check microphone permission" in buf.getvalue()
