@@ -19,10 +19,10 @@ class Spk:
         return self._stop
     async def stop(self): self.stopped += 1; self._stop = True
 
-def ctx(reply, delay=0.0, per=0.0, dry=False):
+def ctx(reply, delay=0.0, per=0.0, dry=False, acks=()):  # acks=() keeps answer tests about the answer
     printed, logs = [], []
     c = DeskCtx(state=DeskState(), brain=Brain(reply, delay), speaker=Spk(per), host_name="Brett Evans",
-                log=logs.append, print_fn=printed.append, dry=dry)
+                log=logs.append, print_fn=printed.append, dry=dry, acks=acks)
     return c, printed, logs
 
 def test_question_is_answered_spoken_and_printed():
@@ -118,3 +118,38 @@ def test_vosk_wake_reaches_the_state_machine():
                   print_fn=out.append, dry=True)
     asyncio.run(handle_utterance(ctx, "Your Snoop is the build passing", 1.0, 2.0, heard_wake=True))
     assert out == ["[dry] WAKE: is the build passing"]
+
+
+def test_acknowledges_right_away_while_the_brain_thinks():
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), delay=0.05, acks=("Hold up.", "One sec."))
+    import time
+    later = time.monotonic() + 100  # past the self-voice hold-off, which runs on the real clock
+    asyncio.run(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+    asyncio.run(handle_utterance(c, "Yo Snoop, PRs?", later, later + 1))
+    assert c.speaker.said == ["Hold up.", "Snoop here.", "One.", "One sec.", "Snoop here.", "One."]
+
+
+def test_brain_is_asked_before_the_acknowledgement_finishes():
+    c, _, _ = ctx(BrainReply(True, "One.", 60, None), per=0.05, acks=("Hold up.",))
+    async def go():
+        t = asyncio.create_task(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+        await asyncio.sleep(0.02)
+        assert c.speaker.said == ["Hold up."] and c.brain.asked == [("CI?", "Brett Evans", "desk")]
+        await t
+    asyncio.run(go())
+
+
+def test_stop_during_acknowledgement_cancels_the_answer():
+    c, _, logs = ctx(BrainReply(True, "One.", 60, None), delay=0.1, per=0.05, acks=("Hold up.",))
+    async def go():
+        t = asyncio.create_task(handle_utterance(c, "Yo Snoop, CI?", 1.0, 2.0))
+        await asyncio.sleep(0.02)
+        await handle_utterance(c, "peanut butter", 2.1, 2.5)
+        await t
+    asyncio.run(go())
+    assert c.speaker.said == ["Hold up."] and logs[0]["outcome"] == "stopped"
+
+
+def test_default_acknowledgements_are_short_and_never_the_stop_phrase():
+    from yosnoop.desk.run import ACKS
+    assert len(ACKS) >= 3 and all(len(a.split()) <= 8 and "peanut" not in a.lower() for a in ACKS)

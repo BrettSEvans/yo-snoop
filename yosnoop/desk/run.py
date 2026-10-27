@@ -7,6 +7,9 @@ from yosnoop.speech import shape
 
 EARSHOT = "Desk Snoop answers out loud. Use it only when everyone who can hear it is on the Saasless team."
 REFRESH_S = 300
+# Said as soon as a question is heard, while the brain looks it up (5-8 s); rotated per question
+ACKS = ("Hold up, let me check.", "One sec, I'm looking it up.", "Give me a few seconds, I'm on it.",
+        "Aight, let me find that.")
 
 
 @dataclass
@@ -21,6 +24,8 @@ class DeskCtx:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     inflight: int = 0
     inflight_max: int = 0
+    acks: tuple = ACKS
+    asked: int = 0
 
 
 async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float, heard_wake: bool = False) -> None:
@@ -48,9 +53,13 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     question = ask.question
     t0 = time.monotonic()
     entry = {"ts": time.time(), "asker": ctx.host_name, "room": "desk", "question": question}
-    reply = await ctx.brain.ask(question, ctx.host_name, "desk")
     on_start = lambda: ctx.state.speaking_started(time.monotonic())
     on_end = lambda: ctx.state.speaking_ended(time.monotonic())
+    pending = asyncio.create_task(ctx.brain.ask(question, ctx.host_name, "desk"))
+    if ctx.acks and ctx.state.stops == ask.stop_seq:
+        await ctx.speaker.speak([ctx.acks[ctx.asked % len(ctx.acks)]], on_start, on_end)
+    ctx.asked += 1
+    reply = await pending
     if ctx.state.stops != ask.stop_seq:  # "peanut butter" since this was asked: say nothing
         outcome = "stopped"
     elif not reply.ok:
