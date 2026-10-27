@@ -12,3 +12,6 @@ __pycache__/
 spikes/extension/config.local.json
 spikes/extension/node_modules/
 .DS_Store
+
+# Kokoro voice model (~330 MB; too big for GitHub) — fetched by ./snoop voice-setup
+models/kokoro/

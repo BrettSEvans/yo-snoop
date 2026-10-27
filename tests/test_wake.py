@@ -28,3 +28,26 @@ def test_bare_snoop_with_comma_wakes_but_not_snoop_dogg():
     assert is_wake("Snoop, how many open pull requests are there?")
     assert not is_wake("Snoop Dogg had a new album out")
     assert not is_wake("we should snoop, maybe later")
+
+def test_desk_mishearings_of_yo_snoop():
+    for t in ("Yes, Snoop", "Yes Snoop, tell me", "You go Snoop", "You gonna Snoop any blockers?"):
+        assert is_wake(t), t
+
+def test_decoys_from_the_desk_run_stay_quiet():
+    for t in ("Snoop around the logs later", "Yo, can you snip that branch?", "I said yo Snoop earlier but never mind",
+              "Let's not Snoop on...", "Snoop", "thing is cool", "Snooping is not a feature.", "Don't snoop",
+              "Snip Dogg having a new album out.", "you should snoop the logs"):
+        assert not is_wake(t), t
+
+def test_second_desk_read_mishearings():
+    for t in ("You have Snoop with the last run cost?", "No Snoop who opened the latest PR",
+              "You have Snoop, which stage is the foodie is that?", "You don't snoop any blockers?",
+              "You have snooped the verify recipe pass.", "Snoop would change in the registry MCP this week."):
+        assert is_wake(t), t
+
+def test_second_read_decoys_stay_quiet():
+    for t in ("We should snoop around the logs later", "Nymph Dogg had a new album up.", "Yo, can you snip that branch?",
+              "I said Yo Snoop earlier but nevermind", "Let's not Snoop on Jeremy's branch.", "Nope.",
+              "Snoop thing is cool", "We could snip the dashboard", "Nippi has a lot of features", "Don't snoop",
+              "Snoop Dogg had a new album out", "Snoop around the logs later"):
+        assert not is_wake(t), t

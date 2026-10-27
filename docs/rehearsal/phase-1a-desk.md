@@ -48,3 +48,13 @@ Deviation from the runbook: the key was first typed at the zsh prompt instead of
 | Headless end-to-end (say-generated "Yo Snoop, how many open pull requests are there?" → endpointer → Whisper → `--dev` brain → gate → shaping) | Heard exactly; answered "There are 8 open pull requests…" (correct) in 7.7 s; one log line, outcome spoken |
 | `say` stop latency (stop() → process exit) | 0.003 s |
 | Whisper on say-generated wake / stop / decoy | wake detected, stop detected, decoy ignored |
+
+## Wake accuracy — `spikes/p2_script.txt` (Brett, 2026-10-26, `./snoop desk --dry --debug`)
+
+19 wake lines, 10 decoys, 1 stop line. Pass: ≥ 18/19 wakes, 0/10 decoys, stop detected.
+
+| Read | Code | Wakes | Decoys woke | Stop | Notes |
+|---|---|---|---|---|---|
+| 1 | `f3ab3ea` (main) | 9/19 FAIL | 0/10 | yes | Mic speech 0.016–0.035 vs threshold 0.015 clipped starts; "Yes Snoop", "You go/gonna Snoop"; pause after "Yo Snoop" split the question off |
+| 2 | `c702540` | 12/19 FAIL | 0/10 | yes | Louder mic (0.1–0.2). New mishearings: "You have Snoop", "No Snoop", "You don't snoop", "You have snooped"; line 28 lost "Yo Snoop" entirely |
+| replay of 1 and 2 through `2fef73a` patterns | — | 17/19 and 18/19 | 0/10 | yes | Lexical stopgap. Next: trained wake-word detector (`docs/superpowers/plans/2026-10-26-wake-word-detector.md`) |
