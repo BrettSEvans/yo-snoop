@@ -24,9 +24,6 @@ def test_no_input_or_chat_code_paths():
         assert len(clicks) <= 1 and (not clicks or "function turnOnCaptions" in src), f"{js.name} clicks outside turnOnCaptions"
 
 def test_local_config_is_ignored():
+    # check-ignore needs no file; never write or delete the real config (it holds the live bridge token)
     p = EXT / "config.local.json"
-    p.write_text("{}")
-    try:
-        assert subprocess.run(["git", "check-ignore", "-q", str(p)]).returncode == 0
-    finally:
-        p.unlink()
+    assert subprocess.run(["git", "check-ignore", "-q", "--no-index", str(p)]).returncode == 0
