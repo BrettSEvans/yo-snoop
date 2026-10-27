@@ -3,11 +3,19 @@
 const TAG = "snoop-spike";
 let port = null;
 
+// Send to the service worker; after the extension is reloaded this page's link is dead for good
+// (chrome.runtime.id is gone), so stop quietly until the tab is reloaded.
+function send(msg) {
+  if (!chrome.runtime?.id) { port = null; return; }
+  try { if (port) port.postMessage(msg); } catch (e) { port = null; }
+}
+
 // Reconnect when Chrome restarts the service worker (the old port disconnects).
 function connectPort() {
+  if (!chrome.runtime?.id) return;  // extension reloaded: this page is orphaned
   port = chrome.runtime.connect({name: "snoop-meet"});
   port.onMessage.addListener((m) => {
-    if (m.type === "dump") { port.postMessage({type: "dump", html: captionRegionHTML()}); return; }
+    if (m.type === "dump") { send({type: "dump", html: captionRegionHTML()}); return; }
     window.postMessage({tag: TAG, dir: "to-page", msg: m}, location.origin);
   });
   port.onDisconnect.addListener(() => setTimeout(connectPort, 1000));
@@ -22,11 +30,11 @@ function captionRegionHTML() {
 // Page -> extension (meeting audio from page_media.js), same origin and tag only.
 window.addEventListener("message", (e) => {
   if (e.source !== window || e.data?.tag !== TAG || e.data.dir !== "to-ext") return;
-  if (port) port.postMessage(e.data.msg);
+  send(e.data.msg);
 });
 
 function emitCaption(speaker, text) {
-  port.postMessage({type: "caption", speaker, text, ts: Date.now() / 1000});
+  send({type: "caption", speaker, text, ts: Date.now() / 1000});
 }
 
 // Captions grow in place while someone talks: send each line whenever its text changes.
