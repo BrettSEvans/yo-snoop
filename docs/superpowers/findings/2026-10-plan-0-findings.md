@@ -90,3 +90,13 @@ Report: `docs/product/critic-reports/2026-10-09-session-aec42f1e-orchestrator-co
 - **P3 proved less than recorded.** Only the write check was shown able to fail. The network and shell checks were never shown able to detect anything, `claude -p` errors were ignored, and the probe ran a different configuration (`--setting-sources project` + `--settings`, CLI 2.1.283) from production (`setting_sources=[]`, bundled CLI 2.1.286). P3's verdict is downgraded to **INCONCLUSIVE except the write check**; Plan 1 Task 9 re-runs every control through the SDK as `snoop`, asserting permission-denial events and no errors.
 - **Subscription and credits:** see spec D25 (rewritten): Max and Team plans include monthly API credits from 2026-10-07.
 - **Serena pin:** the #1938 fix is unreleased on PyPI (1.7.0 predates it); Plan 1 pins a git commit.
+
+## Setup log
+
+2026-10-27, done by Brett, guided by Claude (Plan 0 Task 2):
+
+- Google Cloud project `yo-snoop` under saasless.ai. Enabled: Google Meet REST API, Google Chat API, People API. Cloud Text-to-Speech is **not** enabled (D42: the voice is Onyx on the Mac). No billing or free trial.
+- Google Auth Platform: app "Snoop", audience **Internal**.
+- OAuth client "Snoop desktop" (Desktop app; the "AI-powered agent" box left unticked). Its JSON is at `spikes/.secrets/client_secret.json`: mode 600, git-ignored, project `yo-snoop`. Checked by shape only; never printed.
+- Google Group `snoop-team@startup.ai`: Restricted, no outside members. Members brett@, jeremy@ and lindsay@, matching `config/team.json`.
+- Chrome profile **Snoop**. Plan deviation: Chrome allows only one profile per signed-in account, and brett@ already has one. So the Snoop profile is **not signed in to Chrome** (no sync at all), and brett@ is signed in to the web only, for Meet.
