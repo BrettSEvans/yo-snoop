@@ -1,6 +1,6 @@
 """Ask the extension for the caption region's HTML and save it to ~/.cache/snoop (never the repo).
 The capture holds real names and words: build the sanitized fixture from it, then delete it (Plan 0 Task 6)."""
-import asyncio, logging, time
+import asyncio, logging, sys, time
 from pathlib import Path
 from aiohttp import web
 from spikes.bridge_server import make_app, broadcast, CLIENTS
@@ -37,10 +37,15 @@ async def main():
             await asyncio.sleep(1)
     asyncio.create_task(watch())
     print("Speak a few lines with captions (CC) on, then press Enter here to save the caption area.")
+    enter = asyncio.Queue()  # stdin via the event loop, so Ctrl-C exits at once (no thread stuck in input())
+    asyncio.get_running_loop().add_reader(sys.stdin, lambda: (sys.stdin.readline(), enter.put_nowait(1)))
     while True:
-        await asyncio.get_running_loop().run_in_executor(None, input)
+        await enter.get()
         n = len(app[CLIENTS])
         print(pdt_now(), f"asking {n} Meet tab(s) for the caption area…" if n else "nothing to ask: no extension connected")
         await broadcast(app, {"type": "dump"})
 
-asyncio.run(main())
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    print("\nstopped")
