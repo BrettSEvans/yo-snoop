@@ -9,24 +9,49 @@ GAP_S = (3.0, 5.0)  # seconds between sounds
 MURMUR_EVERY = 3     # every third sound is a murmur, the rest are paper
 
 
+def _band(x: np.ndarray, rate: int, lo: float, hi: float) -> np.ndarray:
+    """Band-pass by FFT mask with soft edges (no clicks, no ringing worth hearing)."""
+    f = np.fft.rfftfreq(len(x), 1 / rate)
+    m = np.clip((f - lo * 0.7) / (lo * 0.3 + 1e-9), 0, 1) * np.clip((hi * 1.3 - f) / (hi * 0.3), 0, 1)
+    return np.fft.irfft(np.fft.rfft(x) * m, len(x))
+
+
+def _hump(n: int, rs) -> np.ndarray:
+    """A hand moving a sheet: smooth rise and fall with a slow wobble."""
+    t = np.linspace(0, 1, n)
+    wobble = 1 + 0.35 * np.sin(2 * np.pi * rs.uniform(4, 9) * t + rs.uniform(0, 6.3))
+    return np.sin(np.pi * t) ** rs.uniform(0.8, 2.0) * wobble
+
+
 def paper_rustle(rate: int = 24000, rng: random.Random | None = None) -> np.ndarray:
-    """0.5-0.9 s of crinkling: a few bursts of bright noise with fast attacks and short decays."""
+    """1.2-2.0 s of handling paper, in three layers over two or three hand movements:
+    a low-mid "sheet sliding" body, crackles from creases (short grains, denser when the hand moves faster),
+    and a little air on top."""
     rng = rng or random.Random()
     rs = np.random.default_rng(rng.randrange(2**32))
-    n = int(rng.uniform(0.5, 0.9) * rate)
-    bright = np.diff(rs.standard_normal(n + 1))  # differenced noise: paper is mostly high frequencies
+    n = int(rng.uniform(1.2, 2.0) * rate)
     env = np.zeros(n)
-    for _ in range(rng.randint(4, 7)):
-        start, length = rng.randrange(0, int(n * 0.85)), int(rng.uniform(0.04, 0.15) * rate)
-        burst = np.exp(-np.arange(length) / (length / 4)) * rng.uniform(0.4, 1.0)
-        burst[: int(0.004 * rate)] *= np.linspace(0, 1, int(0.004 * rate))
-        end = min(n, start + length)
-        env[start:end] += burst[: end - start]
-    crackle = 0.6 + 0.4 * (rs.random(n) < 0.3)  # uneven grain, like creases
-    a = bright * env * crackle
-    fade = int(0.01 * rate)
+    for _ in range(rng.randint(2, 3)):
+        length = int(rng.uniform(0.35, 0.9) * rate)
+        start = rng.randrange(0, max(1, n - length))
+        env[start:start + length] += _hump(length, rs) * rng.uniform(0.5, 1.0)
+    env /= env.max() or 1
+
+    body = _band(rs.standard_normal(n), rate, 250, 2200) * env
+    air = _band(rs.standard_normal(n), rate, 4000, 9000) * env ** 2
+
+    grains = np.zeros(n)
+    for i in np.flatnonzero(rs.random(n) < env * 220 / rate):  # up to ~220 crackles a second at full movement
+        g = int(rs.uniform(0.002, 0.009) * rate)
+        grain = rs.standard_normal(g) * np.exp(-np.arange(g) / (g / 3)) * rs.uniform(0.2, 1.0)
+        grains[i:i + g] += grain[: n - i]
+    crackle = _band(grains, rate, 1200, 7000)
+
+    def unit(x): return x / (np.abs(x).max() or 1)
+    a = 0.55 * unit(body) + 0.5 * unit(crackle) + 0.12 * unit(air)
+    fade = int(0.02 * rate)
     a[:fade] *= np.linspace(0, 1, fade); a[-fade:] *= np.linspace(1, 0, fade)
-    return (a / (np.abs(a).max() or 1) * rng.uniform(0.08, 0.14)).astype(np.float32)
+    return (unit(a) * rng.uniform(0.08, 0.13)).astype(np.float32)
 
 
 async def keep_company(speaker, done: asyncio.Future, gap=GAP_S, on_start=lambda: None, on_end=lambda: None,

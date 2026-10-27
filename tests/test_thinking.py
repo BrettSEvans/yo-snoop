@@ -5,7 +5,7 @@ from yosnoop.desk.thinking import paper_rustle, keep_company, MURMURS
 
 def test_rustle_is_short_quiet_and_not_silent():
     a = paper_rustle(24000, random.Random(1))
-    assert a.dtype == np.float32 and 0.4 <= len(a) / 24000 <= 1.0
+    assert a.dtype == np.float32 and 1.2 <= len(a) / 24000 <= 2.0
     assert np.isfinite(a).all() and 0.02 < np.abs(a).max() <= 0.2
 
 
