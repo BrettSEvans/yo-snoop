@@ -33,9 +33,10 @@ def assert_tools(exposed: set[str]) -> None:
         raise RuntimeError(f"Serena exposes tools outside the keep list: {extra}")
 
 
-async def list_tools(command: list[str]) -> set[str]:
+async def list_tools(command: list[str], errlog=None) -> set[str]:
+    """errlog: where the server's own logging goes (default: this process's stderr)."""
     params = StdioServerParameters(command=command[0], args=command[1:])
-    async with stdio_client(params) as (r, w):
+    async with stdio_client(params, **({"errlog": errlog} if errlog else {})) as (r, w):
         async with ClientSession(r, w) as s:
             await s.initialize()
             return {t.name for t in (await s.list_tools()).tools}

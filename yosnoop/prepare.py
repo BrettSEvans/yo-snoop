@@ -62,7 +62,10 @@ def prepare(dev: bool = False, sync: bool = True) -> PrepReport:
     scmd = make_serena_cmd(rt, k)
     try:
         # Host-side first run: Serena autofills project.yml (it cannot write it later as snoop) and we check its tools
-        assert_tools(run_sync(list_tools(["/usr/bin/env", "-i", f"HOME={os.environ['HOME']}", *scmd])))
+        log = Path(os.environ["HOME"]) / ".cache" / "snoop" / "serena-prepare.log"  # Serena's startup chatter
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with open(log, "w") as errlog:
+            assert_tools(run_sync(list_tools(["/usr/bin/env", "-i", f"HOME={os.environ['HOME']}", *scmd], errlog)))
         (k / ".serena" / "project.yml").chmod(0o644)  # Serena's atomic rewrite leaves it 0600; snoop must read it
     except Exception as e:
         errors.append(f"serena: {type(e).__name__}: {e}")
