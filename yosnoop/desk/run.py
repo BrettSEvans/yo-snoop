@@ -1,4 +1,4 @@
-import asyncio, sys, time
+import asyncio, re, sys, time
 from dataclasses import dataclass, field
 from typing import Callable
 from yosnoop.desk.state import Ask, Stop
@@ -10,6 +10,19 @@ REFRESH_S = 300
 # Said as soon as a question is heard, while the brain looks it up (5-8 s); rotated per question
 ACKS = ("Hold up, let me check.", "One sec, I'm looking it up.", "Give me a few seconds, I'm on it.",
         "Aight, let me find that.")
+# Follow-ups to the last answer: "the rest" speaks its summary, "full details" speaks all of it
+_DETAILS = re.compile(r"\b(?:full|all the|all of the) details\b|\bfull answer\b|\ball of it\b|\beverything\b"
+                      r"|\bthe whole (?:thing|answer)\b", re.IGNORECASE)
+_REST = re.compile(r"^(?:(?:can|could) you |please )?(?:(?:give|tell) me (?:the )?(?:rest|more)|(?:the )?rest\b"
+                   r"|more\b|keep going|go on|continue|what else)", re.IGNORECASE)
+FOLLOW_UP_MAX_WORDS = 8  # "summarize what changed in the engineer skill this week" is a new question
+
+
+def follow_up(question: str) -> str | None:
+    q = question.strip(" .,!?")
+    if len(q.split()) > FOLLOW_UP_MAX_WORDS:
+        return None
+    return "details" if _DETAILS.search(q) else "summary" if _REST.match(q) else None
 
 
 @dataclass
@@ -26,6 +39,7 @@ class DeskCtx:
     inflight_max: int = 0
     acks: tuple = ACKS
     asked: int = 0
+    last: object = None  # the last spoken answer (speech.Shaped), for "the rest" / "full details"
 
 
 async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float, heard_wake: bool = False) -> None:
@@ -55,6 +69,11 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     entry = {"ts": time.time(), "asker": ctx.host_name, "room": "desk", "question": question}
     on_start = lambda: ctx.state.speaking_started(time.monotonic())
     on_end = lambda: ctx.state.speaking_ended(time.monotonic())
+    tier = follow_up(question) if ctx.last else None
+    if tier:
+        cut = await ctx.speaker.speak(getattr(ctx.last, tier) or ["That's all I've got."], on_start, on_end)
+        ctx.log({**entry, "outcome": "stopped" if cut else "spoken", "latency_s": round(time.monotonic() - t0, 2)})
+        return
     pending = asyncio.create_task(ctx.brain.ask(question, ctx.host_name, "desk"))
     if ctx.acks and ctx.state.stops == ask.stop_seq:
         await ctx.speaker.speak([ctx.acks[ctx.asked % len(ctx.acks)]], on_start, on_end)
@@ -69,10 +88,11 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     else:
         s = shape(reply.text, reply.clone_age_s)
         # gate the raw answer and exactly what will be printed and spoken (markdown removal can rejoin a key)
-        if not all(gate(t).allowed for t in (reply.text, s.full, " ".join(s.spoken))):
+        if not all(gate(t).allowed for t in (reply.text, s.full, *(" ".join(x) for x in (s.spoken, s.summary, s.details)))):
             await ctx.speaker.speak([BLOCKED], on_start, on_end); outcome = "blocked"
         else:
             ctx.print_fn(f"\n[Snoop → {ctx.host_name}] {s.full}")
+            ctx.last = s
             cut = await ctx.speaker.speak(s.spoken, on_start, on_end)
             if cut:
                 ctx.print_fn("(stopped)")

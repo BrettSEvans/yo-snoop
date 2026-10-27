@@ -153,3 +153,44 @@ def test_stop_during_acknowledgement_cancels_the_answer():
 def test_default_acknowledgements_are_short_and_never_the_stop_phrase():
     from yosnoop.desk.run import ACKS
     assert len(ACKS) >= 3 and all(len(a.split()) <= 8 and "peanut" not in a.lower() for a in ACKS)
+
+
+TIERED = "Five merged. None passed. Newest is 712.\nSUMMARY:\nSum one. Sum two.\nDETAILS:\nDet one. Det two. Det three."
+
+
+def _later():
+    import time
+    return time.monotonic() + 100  # past the self-voice hold-off, which runs on the real clock
+
+
+def test_the_rest_speaks_the_summary_without_asking_the_brain_again():
+    c, _, logs = ctx(BrainReply(True, TIERED, 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, what merged?", 1.0, 2.0))
+    t = _later()
+    asyncio.run(handle_utterance(c, "Yo Snoop, give me the rest", t, t + 1))
+    assert c.speaker.said[-2:] == ["Sum one.", "Sum two."] and len(c.brain.asked) == 1
+    assert logs[-1]["outcome"] == "spoken" and logs[-1]["question"] == "give me the rest"
+
+
+def test_full_details_speaks_everything():
+    c, _, _ = ctx(BrainReply(True, TIERED, 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, what merged?", 1.0, 2.0))
+    t = _later()
+    asyncio.run(handle_utterance(c, "Yo Snoop, full details please", t, t + 1))
+    assert c.speaker.said[-3:] == ["Det one.", "Det two.", "Det three."] and len(c.brain.asked) == 1
+
+
+def test_follow_up_phrases():
+    from yosnoop.desk.run import follow_up
+    for q in ("give me the rest", "the rest", "tell me more", "keep going", "what else?", "Can you give me the rest of it?"):
+        assert follow_up(q) == "summary", q
+    for q in ("full details", "give me the full details", "all of it", "the whole answer", "tell me everything"):
+        assert follow_up(q) == "details", q
+    for q in ("summarize what changed in the engineer skill this week", "is CI green", "how many more PRs are open on main"):
+        assert follow_up(q) is None, q
+
+
+def test_follow_up_before_any_answer_goes_to_the_brain():
+    c, _, _ = ctx(BrainReply(True, "Nothing yet.", 60, None))
+    asyncio.run(handle_utterance(c, "Yo Snoop, tell me more", 1.0, 2.0))
+    assert c.brain.asked == [("tell me more", "Brett Evans", "desk")]
