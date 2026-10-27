@@ -24,9 +24,9 @@ def _hump(n: int, rs) -> np.ndarray:
 
 
 def paper_rustle(rate: int = 24000, rng: random.Random | None = None) -> np.ndarray:
-    """1.2-2.0 s of handling paper, in three layers over two or three hand movements:
+    """1.2-2.0 s of handling paper, in four layers over two or three hand movements:
     a low-mid "sheet sliding" body, crackles from creases (short grains, denser when the hand moves faster),
-    and a little air on top."""
+    a little air on top, and a bass layer for the sheet's weight against the desk."""
     rng = rng or random.Random()
     rs = np.random.default_rng(rng.randrange(2**32))
     n = int(rng.uniform(1.2, 2.0) * rate)
@@ -39,6 +39,7 @@ def paper_rustle(rate: int = 24000, rng: random.Random | None = None) -> np.ndar
 
     body = _band(rs.standard_normal(n), rate, 250, 2200) * env
     air = _band(rs.standard_normal(n), rate, 4000, 9000) * env ** 2
+    bass = _band(rs.standard_normal(n), rate, 50, 280) * env  # weight of the sheet against the desk
 
     grains = np.zeros(n)
     for i in np.flatnonzero(rs.random(n) < env * 220 / rate):  # up to ~220 crackles a second at full movement
@@ -48,7 +49,7 @@ def paper_rustle(rate: int = 24000, rng: random.Random | None = None) -> np.ndar
     crackle = _band(grains, rate, 1200, 7000)
 
     def unit(x): return x / (np.abs(x).max() or 1)
-    a = 0.55 * unit(body) + 0.5 * unit(crackle) + 0.12 * unit(air)
+    a = 0.55 * unit(body) + 0.5 * unit(crackle) + 0.12 * unit(air) + 0.35 * unit(bass)
     fade = int(0.02 * rate)
     a[:fade] *= np.linspace(0, 1, fade); a[-fade:] *= np.linspace(1, 0, fade)
     return (unit(a) * rng.uniform(0.08, 0.13)).astype(np.float32)
