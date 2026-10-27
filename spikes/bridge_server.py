@@ -26,7 +26,10 @@ def make_app(token: str, on_message: Callable[[dict], None], hello_timeout: floa
         try:
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
-                    on_message(msg.json())
+                    try:
+                        on_message(msg.json())
+                    except Exception as e:  # one bad message must not close the link silently
+                        print(f"bridge: error handling a {msg.json().get('type', '?')} message: {type(e).__name__}: {e}")
         finally:
             app[CLIENTS].discard(ws)
         return ws

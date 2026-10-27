@@ -11,7 +11,7 @@ async function connect() {
   ws = new WebSocket(`ws://127.0.0.1:${c.port}/snoop`);
   ws.onopen = () => ws.send(JSON.stringify({type: "hello", token: c.token}));
   ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type !== "ack" && port) port.postMessage(m); };
-  ws.onclose = () => { ws = null; setTimeout(connect, 2000); };
+  ws.onclose = (e) => { console.warn("snoop bridge closed", e.code, e.reason); ws = null; setTimeout(connect, 2000); };
 }
 
 // Chrome stops an idle service worker after ~30 s; WebSocket traffic keeps it alive (Chrome 116+).
