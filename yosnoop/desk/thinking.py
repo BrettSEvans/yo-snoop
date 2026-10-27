@@ -49,7 +49,7 @@ def paper_rustle(rate: int = 24000, rng: random.Random | None = None) -> np.ndar
     crackle = _band(grains, rate, 1200, 7000)
 
     def unit(x): return x / (np.abs(x).max() or 1)
-    a = 0.55 * unit(body) + 0.5 * unit(crackle) + 0.12 * unit(air) + 0.35 * unit(bass)
+    a = 0.55 * unit(body) + 0.5 * unit(crackle) + 0.12 * unit(air) + 0.21 * unit(bass)
     fade = int(0.02 * rate)
     a[:fade] *= np.linspace(0, 1, fade); a[-fade:] *= np.linspace(1, 0, fade)
     return (unit(a) * rng.uniform(0.08, 0.13)).astype(np.float32)
