@@ -52,3 +52,19 @@ The standard openWakeWord training recipe (`notebooks/automatic_model_training.i
 Install check: `openwakeword==0.6.0` installs and imports on Python 3.12 / numpy 2.5.4 / onnxruntime 1.31.1 (scratch venv, deleted).
 
 **Decision (Brett, 2026-10-26):** keep the lexical stopgap and measure it on more voices before training anything. The detector plan is parked.
+
+## Wake spike: phrase-list recognizers (2026-10-26)
+
+After read 3 (14/19 on fresh lines) Brett asked for a free, already-trained detector.
+
+- **sherpa-onnx keyword spotter:** license gate FAIL. The English model (`sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01`) states no license and is trained on GigaSpeech, whose terms limit use to "non-commercial research and educational purposes" and bind the user's employer. Not downloaded.
+- **Vosk, grammar mode:** license gate PASS (`vosk-model-small-en-us-0.15`, 40 MB, Apache 2.0 on alphacephei.com/vosk/models). Grammar `["yo snoop", "[unk]"]`; wake when the first decoded words are "yo snoop", each word's confidence ≥ 0.6, with at most 0.2 s of `[unk]` before them.
+
+Same audio for both (8 Mac `say` voices × `p2_script.txt` + `p3_script.txt`, wake and decoy lines; scratch in `~/.cache/snoop/vosk-spike`, nothing in the repo):
+
+| Wake check | Wakes | Decoys woke |
+|---|---|---|
+| Whisper small.en + lexical patterns (today's desk) | 244/304 (80%) | 2/160 |
+| Vosk grammar, conf ≥ 0.6, ≤ 0.2 s before | 291/304 (96%) | 1/160 ("we don't snoop on people here", one voice) |
+
+Without the "nothing much before it" rule, "I said yo snoop earlier" woke it in every voice. Synthetic voices only: Brett's real voice is the test that counts.
