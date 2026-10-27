@@ -70,3 +70,5 @@ Same audio for both (8 Mac `say` voices × `p2_script.txt` + `p3_script.txt`, wa
 Without the "nothing much before it" rule, "I said yo snoop earlier" woke it in every voice. Synthetic voices only: Brett's real voice is the test that counts.
 
 With the desk's 0.6 s of pre-roll silence in front of each clip (as `./snoop desk` feeds it), Vosk scores 303/304 wakes but 5/160 decoys: "don't snoop" (3 voices), "we don't snoop…" and "the Snoopy cartoon" decode as "yo snoop". `./snoop desk --debug` now prints Vosk's verdict under Whisper's for each utterance (it doesn't change what Snoop does), so one live read scores both.
+
+**Decision (Brett, 2026-10-27):** Snoop wakes when Vosk **or** Whisper's wake patterns hear "Yo Snoop". When only Vosk heard it, the question is Whisper's text with its opening words dropped through the first "sn…" word (within the first four words). Replaying read 4: 19/19 wakes, 1/10 false wakes ("He was snipping around the kitchen" → asks "around the kitchen"), accepted as a rare stray answer.

@@ -108,8 +108,13 @@ def test_key_rejoined_by_markdown_removal_is_blocked():
 
 def test_vosk_debug_line_shows_its_verdict():
     from yosnoop.desk.run import vosk_debug_line
-    class FakeVosk:
-        def __init__(self, woke): self.woke = woke
-        def check(self, audio): return self.woke, "yo(1.00) snoop(0.98)"
-    assert vosk_debug_line(FakeVosk(True), None) == "[debug] vosk: WAKE  (yo(1.00) snoop(0.98))"
-    assert vosk_debug_line(FakeVosk(False), None) == "[debug] vosk: no    (yo(1.00) snoop(0.98))"
+    assert vosk_debug_line(True, "yo(1.00) snoop(0.98)") == "[debug] vosk: WAKE  (yo(1.00) snoop(0.98))"
+    assert vosk_debug_line(False, "yo(1.00) snoop(0.98)") == "[debug] vosk: no    (yo(1.00) snoop(0.98))"
+
+
+def test_vosk_wake_reaches_the_state_machine():
+    out = []
+    ctx = DeskCtx(state=DeskState(), brain=None, speaker=None, host_name="Brett Evans", log=lambda e: None,
+                  print_fn=out.append, dry=True)
+    asyncio.run(handle_utterance(ctx, "Your Snoop is the build passing", 1.0, 2.0, heard_wake=True))
+    assert out == ["[dry] WAKE: is the build passing"]

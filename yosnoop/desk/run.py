@@ -23,9 +23,10 @@ class DeskCtx:
     inflight_max: int = 0
 
 
-async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float) -> None:
-    """Callers run this as its own task per utterance, so a stop is heard while an answer is spoken."""
-    for a in ctx.state.on_utterance(text, start, end):
+async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float, heard_wake: bool = False) -> None:
+    """Callers run this as its own task per utterance, so a stop is heard while an answer is spoken.
+    heard_wake: Vosk heard "yo snoop"; it wakes Snoop even when Whisper's words miss the wake patterns."""
+    for a in ctx.state.on_utterance(text, start, end, heard_wake):
         if isinstance(a, Stop):
             if ctx.dry:
                 ctx.print_fn("[dry] STOP")
@@ -70,9 +71,7 @@ async def _answer(ctx: DeskCtx, ask: Ask) -> None:
     ctx.log({**entry, "outcome": outcome, "latency_s": round(time.monotonic() - t0, 2)})
 
 
-def vosk_debug_line(vw, audio) -> str:
-    """Second wake opinion, shown beside Whisper's in --debug; it does not change what Snoop does."""
-    woke, heard = vw.check(audio)
+def vosk_debug_line(woke: bool, heard: str) -> str:
     return f"[debug] vosk: {'WAKE' if woke else 'no  '}  ({heard})"
 
 
@@ -124,12 +123,10 @@ async def _run_desk(argv: list[str]) -> int:
         await brain.start()
     print("Loading speech recognition and Snoop's voice…")
     stt, stop_stt = Transcriber(), Transcriber(STOP_MODEL)
-    vosk = None
-    if debug:
-        from yosnoop.desk.vosk_wake import make_vosk_wake
-        vosk = make_vosk_wake()
-        if vosk is None:
-            print("[debug] Vosk wake model not installed (./snoop voice-setup); showing Whisper only.")
+    from yosnoop.desk.vosk_wake import make_vosk_wake
+    vosk = make_vosk_wake()  # Snoop wakes when Vosk or Whisper hears "Yo Snoop"
+    if vosk is None:
+        print("Wake-word checker not installed; Snoop will miss more wakes. Run ./snoop voice-setup.")
     ctx = DeskCtx(state=DeskState(), brain=brain, speaker=make_speaker(), host_name=host.display_name,
                   log=lambda e: qlog.write(e, logdir), dry=dry)
     loop, q = asyncio.get_running_loop(), asyncio.Queue()
@@ -175,12 +172,14 @@ async def _run_desk(argv: list[str]) -> int:
                 u = ep.feed(frame, t)
                 if u is None or ctx.state.blocked(u.start):  # overlaps Snoop's voice: only the watcher listens
                     continue
-                text = await asyncio.to_thread(stt.transcribe, u.audio)
+                text, (woke, vheard) = await asyncio.gather(
+                    asyncio.to_thread(stt.transcribe, u.audio),
+                    asyncio.to_thread(vosk.check, u.audio) if vosk else asyncio.sleep(0, (False, "")))
                 if debug:
                     print(f"[debug] heard: {text!r}")
                     if vosk:
-                        print(await asyncio.to_thread(vosk_debug_line, vosk, u.audio))
-                task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end))
+                        print(vosk_debug_line(woke, vheard))
+                task = asyncio.create_task(handle_utterance(ctx, text, u.start, u.end, woke))
                 tasks.add(task); task.add_done_callback(tasks.discard)
     finally:
         watcher.cancel()
