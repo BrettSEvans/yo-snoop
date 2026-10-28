@@ -8,7 +8,7 @@ NOT the Plan 4 room check (P1 is still to do). Guard for this spike: you confirm
 team members (config/team.json) are in the meeting, and if a caption comes from anyone whose Meet name is not
 on the roster Snoop goes quiet for the rest of the run. A silent outsider would not be caught: that is P1.
 
-Usage: uv run --extra desk python -m spikes.p8_live [--dev]
+Usage: uv run --extra desk python -m spikes.p8_live [--dev] [--debug]  (--debug prints every caption update)
 """
 import asyncio, base64, re, sys, time
 import numpy as np
@@ -123,7 +123,7 @@ async def main(argv: list[str]) -> int:
     if not files_ok(MODEL_DIR):
         print("Onyx not installed: run ./snoop voice-setup"); return 1
 
-    dev = "--dev" in argv
+    dev, debug = "--dev" in argv, "--debug" in argv
     print("Preparing Snoop's notes…")
     for e in (await asyncio.to_thread(prepare, dev=dev)).errors:
         print(f"  prepare: {e}")
@@ -169,6 +169,8 @@ async def main(argv: list[str]) -> int:
             return
         now = time.monotonic()
         last = _sentences(m["text"])[-1:] or [""]
+        if debug:
+            print(pdt_now(), "[caption]", shown_as(speaker), "|", m["text"][-120:])
         key = (speaker, last[0])
         if is_stop(last[0]) and key not in stopped_sentences:  # stop at once, don't wait for it to settle
             stopped_sentences.add(key)
