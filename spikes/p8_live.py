@@ -163,7 +163,7 @@ async def main(argv: list[str]) -> int:
     async def send(m):
         await broadcast(app, m)
 
-    ctx = DeskCtx(state=DeskState(), brain=brain, speaker=MeetSpeaker(send, synth), host_name=host.display_name,
+    ctx = DeskCtx(state=DeskState(interrupt_on_wake=True), brain=brain, speaker=MeetSpeaker(send, synth), host_name=host.display_name,
                   log=lambda e: qlog.write({**e, "room": "meet-spike"}, logdir))
 
     async def go_quiet(line: str) -> None:
@@ -214,7 +214,7 @@ async def main(argv: list[str]) -> int:
     while not app[CLIENTS]:
         print(pdt_now(), "waiting for the Snoop extension (meeting open in the Snoop profile, CC on, mic unmuted)…")
         await asyncio.sleep(3)
-    print(pdt_now(), 'Snoop is in the meeting. Say "Yo Snoop!", pause, then your question. "Peanut butter" stops it. Ctrl-C quits.')
+    print(pdt_now(), 'Snoop is in the meeting. Say "Yo Snoop!", pause, then your question. "Peanut butter" stops it; so does a new "Yo Snoop". Ctrl-C quits.')
     try:
         await ticker()
     finally:

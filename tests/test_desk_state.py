@@ -97,3 +97,28 @@ def test_armed_window_takes_the_question_only_from_the_speaker_who_woke_it():
     assert s.on_utterance("Yo Snoop", 1.0, 1.5, speaker="Brett Evans") == []
     assert s.on_utterance("Ha.", 2.0, 2.2, speaker="Lindsay Palmer") == []
     assert s.on_utterance("Is CI green?", 3.0, 4.0, speaker="Brett Evans") == [Ask("Is CI green?")]
+
+
+# Meet seat (Brett, 2026-10-29): a teammate's "Yo Snoop" while Snoop is talking cuts the answer and takes the new
+# question. Opt-in: the desk's own mic hears Snoop's voice, so there a wake while speaking stays ignored.
+def test_meet_seat_wake_while_speaking_stops_and_asks():
+    s = DeskState(interrupt_on_wake=True); s.speaking_started(10.0)
+    assert s.on_utterance("Yo Snoop, CI?", 11.0, 12.0, speaker="Jeremy Leeds") == [Stop(), Ask("CI?")]
+    assert s.stops == 1
+
+
+def test_meet_seat_bare_wake_while_speaking_stops_and_arms():
+    s = DeskState(interrupt_on_wake=True); s.speaking_started(10.0)
+    assert s.on_utterance("Yo Snoop", 11.0, 11.5, speaker="Jeremy Leeds") == [Stop()]
+    s.speaking_ended(11.6)
+    assert s.on_utterance("is CI green?", 13.0, 14.0, speaker="Jeremy Leeds") == [Ask("is CI green?")]
+
+
+def test_meet_seat_wake_in_the_holdoff_after_speaking_also_counts():
+    s = DeskState(interrupt_on_wake=True); s.speaking_started(10.0); s.speaking_ended(12.0)
+    assert s.on_utterance("Yo Snoop, CI?", 12.5, 13.0, speaker="Brett Evans") == [Stop(), Ask("CI?")]
+
+
+def test_desk_still_ignores_a_wake_while_speaking():
+    s = DeskState(); s.speaking_started(10.0)
+    assert s.on_utterance("Yo Snoop, CI?", 11.0, 12.0) == []
