@@ -6,7 +6,8 @@ shuffles while it thinks. Snoop's own captions ("You") are ignored.
 
 NOT the Plan 4 room check (P1 is still to do). Guard for this spike: you confirm at start that only Saasless
 team members (config/team.json) are in the meeting, and if a caption comes from anyone whose Meet name is not
-on the roster Snoop goes quiet for the rest of the run. A silent outsider would not be caught: that is P1.
+on the roster Snoop says so once and goes quiet for the rest of the run (the label it saw is on the terminal).
+A silent outsider would not be caught: that is P1.
 
 Usage: uv run --extra desk python -m spikes.p8_live [--dev] [--debug]  (--debug prints every caption update)
 """
@@ -14,11 +15,20 @@ import asyncio, base64, re, sys, time
 import numpy as np
 
 SETTLE_S = 0.8  # Meet rewrites a caption for about a second; judge a sentence once it stops changing
+GUARD_LINE = "Snoop here. Someone I don't recognize is in the meeting, so I'm going quiet for the rest of this call."
 _SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 
 def _sentences(text: str) -> list[str]:
     return [p for p in _SPLIT.split(text.strip()) if p]
+
+
+def guard(speaker: str, team: set, state: dict) -> str | None:
+    """What Snoop says the first time a caption label is not on the team (and marks the run unsafe); else None."""
+    if state["unsafe"] or speaker in team:
+        return None
+    state["unsafe"] = True
+    return GUARD_LINE
 
 
 class CaptionSettler:
@@ -156,6 +166,11 @@ async def main(argv: list[str]) -> int:
     ctx = DeskCtx(state=DeskState(), brain=brain, speaker=MeetSpeaker(send, synth), host_name=host.display_name,
                   log=lambda e: qlog.write({**e, "room": "meet-spike"}, logdir))
 
+    async def go_quiet(line: str) -> None:
+        await ctx.speaker.stop()
+        await ctx.speaker.speak([line], lambda: ctx.state.speaking_started(time.monotonic()),
+                                lambda: ctx.state.speaking_ended(time.monotonic()))
+
     def judge(speaker: str, sentence: str) -> None:
         now = time.monotonic()
         print(pdt_now(), "[heard]", shown_as(speaker), "|", sentence)
@@ -167,10 +182,10 @@ async def main(argv: list[str]) -> int:
         speaker = m["speaker"]
         if is_own_seat(speaker, OWN_LABEL):
             return  # Snoop's own speech
-        if speaker not in team:
-            state["unsafe"] = True
-            asyncio.create_task(ctx.speaker.stop())
-            print(pdt_now(), f"[guard] someone not on the team is speaking ({speaker!r}): Snoop is quiet for the rest of this run.")
+        line = guard(speaker, team, state)
+        if line:
+            print(pdt_now(), f"[guard] caption label {speaker!r} is not a team display name: Snoop is quiet for the rest of this run.")
+            asyncio.create_task(go_quiet(line))
             return
         now = time.monotonic()
         last = _sentences(m["text"])[-1:] or [""]

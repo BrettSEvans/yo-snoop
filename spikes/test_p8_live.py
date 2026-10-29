@@ -71,3 +71,14 @@ def test_a_rewrite_inside_the_same_block_after_settling_is_not_repeated():
     assert s.tick(1.0) == [("Brett Evans", "Yo Snoop!")]
     s.feed("Brett Evans", "Yo, Snoop!", 1.1, block=1)                      # Meet touched it up late
     assert s.tick(2.0) == []
+
+
+# 2026-10-28: someone joined under a label not on the team and Snoop went quiet for 20 minutes without a word
+# into the meeting. The guard still goes quiet, but says so once, out loud.
+def test_guard_goes_quiet_once_and_says_so():
+    from spikes.p8_live import guard, GUARD_LINE
+    state = {"unsafe": False}
+    assert guard("Brett Evans", {"Brett Evans"}, state) is None and not state["unsafe"]
+    assert guard("Lindsay P", {"Brett Evans"}, state) == GUARD_LINE and state["unsafe"]
+    assert guard("Lindsay P", {"Brett Evans"}, state) is None          # said once, then silent
+    assert guard("Brett Evans", {"Brett Evans"}, state) is None        # and stays quiet for the team too
