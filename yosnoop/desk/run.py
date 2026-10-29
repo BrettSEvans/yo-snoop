@@ -44,10 +44,12 @@ class DeskCtx:
     last: object = None  # the last spoken answer (speech.Shaped), for "the rest" / "full details"
 
 
-async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float, heard_wake: bool = False) -> None:
+async def handle_utterance(ctx: DeskCtx, text: str, start: float, end: float, heard_wake: bool = False,
+                           speaker=None) -> None:
     """Callers run this as its own task per utterance, so a stop is heard while an answer is spoken.
-    heard_wake: Vosk heard "yo snoop"; it wakes Snoop even when Whisper's words miss the wake patterns."""
-    for a in ctx.state.on_utterance(text, start, end, heard_wake):
+    heard_wake: Vosk heard "yo snoop"; it wakes Snoop even when Whisper's words miss the wake patterns.
+    speaker: who said it, when the caller knows (Meet caption label); the desk has one speaker and passes none."""
+    for a in ctx.state.on_utterance(text, start, end, heard_wake, speaker=speaker):
         if isinstance(a, Stop):
             if ctx.dry:
                 ctx.print_fn("[dry] STOP")

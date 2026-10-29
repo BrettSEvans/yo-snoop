@@ -33,15 +33,18 @@ window.addEventListener("message", (e) => {
   send(e.data.msg);
 });
 
-function emitCaption(speaker, text) {
-  send({type: "caption", speaker, text, ts: Date.now() / 1000});
+function emitCaption(line) {
+  send({type: "caption", speaker: line.speaker, text: line.text, block: line.block, ts: Date.now() / 1000});
 }
 
-// Captions grow in place while someone talks: send each line whenever its text changes.
-const sent = new Map();  // block index -> last "speaker|text" sent
+// Captions grow in place while someone talks: send each block whenever its text changes. Keyed by block id,
+// not position, so a turn scrolling off the top does not re-send the ones below it.
+const sent = new Map();  // block id -> last "speaker|text" sent
 new MutationObserver(() => {
-  parseCaptions(document).forEach((line, i) => {
+  const lines = parseCaptions(document), live = new Set(lines.map((l) => l.block));
+  for (const line of lines) {
     const key = `${line.speaker}|${line.text}`;
-    if (sent.get(i) !== key) { sent.set(i, key); emitCaption(line.speaker, line.text); }
-  });
+    if (sent.get(line.block) !== key) { sent.set(line.block, key); emitCaption(line); }
+  }
+  for (const id of sent.keys()) if (!live.has(id)) sent.delete(id);
 }).observe(document.body, {childList: true, subtree: true, characterData: true});

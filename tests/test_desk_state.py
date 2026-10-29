@@ -88,3 +88,12 @@ def test_no_vosk_wake_changes_nothing():
 
 def test_vosk_wake_strips_a_glued_mishearing():  # desk run 2026-10-27: "F-snip is a C.I. green"
     assert DeskState().on_utterance("F-snip is a C.I. green", 1.0, 2.0, heard_wake=True) == [Ask("is a C.I. green")]
+
+
+# Meet seat, group meeting (2026-10-28): the bare wake arms Snoop for the SAME speaker's next sentence only.
+# Someone else's sentence inside the window is not the question and does not close the window.
+def test_armed_window_takes_the_question_only_from_the_speaker_who_woke_it():
+    s = DeskState()
+    assert s.on_utterance("Yo Snoop", 1.0, 1.5, speaker="Brett Evans") == []
+    assert s.on_utterance("Ha.", 2.0, 2.2, speaker="Lindsay Palmer") == []
+    assert s.on_utterance("Is CI green?", 3.0, 4.0, speaker="Brett Evans") == [Ask("Is CI green?")]

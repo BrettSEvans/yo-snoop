@@ -22,29 +22,34 @@ def _sentences(text: str) -> list[str]:
 
 
 class CaptionSettler:
-    """Turns growing, self-correcting caption text into finished sentences, per speaker."""
+    """Turns growing, self-correcting caption text into finished sentences, per caption block.
+
+    Meet keeps one speaker's turn in one block while they talk, but in a group each turn is a new block that
+    starts again at one sentence. The extension names blocks (`block`); a new block is never a rewrite of an
+    old one. Without a block id the speaker's name stands in for it (solo runs, older captures)."""
 
     def __init__(self, settle_s: float = SETTLE_S):
-        self.settle, self._cur = settle_s, {}  # speaker -> [sentence, changed_at, emitted, count]
+        self.settle, self._cur = settle_s, {}  # key -> [sentence, changed_at, emitted, count, speaker]
 
-    def feed(self, speaker: str, text: str, now: float) -> list[tuple[str, str]]:
+    def feed(self, speaker: str, text: str, now: float, block=None) -> list[tuple[str, str]]:
         parts = _sentences(text)
         if not parts:
             return []
-        out, cur = [], self._cur.get(speaker)
+        key = speaker if block is None else block
+        out, cur = [], self._cur.get(key)
         if cur and len(parts) > cur[3] and not cur[2]:  # a new sentence began: the previous one is finished
             out.append((speaker, parts[-2]))
             cur[2] = True
         if cur is None or cur[0] != parts[-1]:
             emitted = bool(cur and cur[2] and len(parts) == cur[3])  # same sentence, rewritten after emitting
-            self._cur[speaker] = [parts[-1], now, emitted, len(parts)]
+            self._cur[key] = [parts[-1], now, emitted, len(parts), speaker]
         return out
 
     def tick(self, now: float) -> list[tuple[str, str]]:
         out = []
-        for speaker, cur in self._cur.items():
+        for cur in self._cur.values():
             if not cur[2] and now - cur[1] >= self.settle:
-                out.append((speaker, cur[0])); cur[2] = True
+                out.append((cur[4], cur[0])); cur[2] = True
         return out
 
 
@@ -154,7 +159,7 @@ async def main(argv: list[str]) -> int:
     def judge(speaker: str, sentence: str) -> None:
         now = time.monotonic()
         print(pdt_now(), "[heard]", shown_as(speaker), "|", sentence)
-        asyncio.create_task(handle_utterance(ctx, sentence, now, now))
+        asyncio.create_task(handle_utterance(ctx, sentence, now, now, speaker=speaker))
 
     def on_message(m):
         if m.get("type") != "caption" or state["unsafe"]:
@@ -176,7 +181,7 @@ async def main(argv: list[str]) -> int:
             stopped_sentences.add(key)
             print(pdt_now(), "[stop]", shown_as(speaker), "|", last[0])
             asyncio.create_task(handle_utterance(ctx, "peanut butter", now, now))
-        for spk, sentence in settler.feed(speaker, m["text"], now):
+        for spk, sentence in settler.feed(speaker, m["text"], now, block=m.get("block")):
             if not is_stop(sentence):
                 judge(spk, sentence)
 

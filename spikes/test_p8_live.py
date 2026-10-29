@@ -44,3 +44,30 @@ def test_stop_cuts_speech_and_tells_the_page():
         t = asyncio.create_task(spk.speak(["Long."], lambda: None, lambda: None))
         await asyncio.sleep(0.2); await spk.stop(); return await t
     assert asyncio.run(go()) is True and sent[-1] == {"type": "stop"} and len([m for m in sent if m["type"] == "audio"]) == 1
+
+
+# Group meeting, 2026-10-28: other people's turns split one speaker's captions into separate Meet blocks, each
+# starting at one sentence. A new block is never a rewrite of the old one, whatever its sentence count.
+def test_a_new_block_from_the_same_speaker_is_never_a_rewrite():
+    s = CaptionSettler()
+    s.feed("Brett Evans", "Yeah.", 0.0, block=1); s.tick(1.0)              # one-sentence remark, emitted
+    s.feed("Jeremy Leeds", "So the roadmap is fine.", 1.0, block=2); s.tick(2.0)
+    s.feed("Brett Evans", "Yo Snoop!", 2.0, block=3)                       # new block, also one sentence
+    assert s.tick(3.0) == [("Brett Evans", "Yo Snoop!")]
+
+
+def test_wake_and_question_in_separate_blocks_both_come_out():
+    s = CaptionSettler()
+    s.feed("Brett Evans", "Yo Snoop!", 0.0, block=1)
+    assert s.tick(1.0) == [("Brett Evans", "Yo Snoop!")]
+    s.feed("Lindsay Palmer", "Ha.", 1.0, block=2); s.tick(2.0)
+    s.feed("Brett Evans", "Is CI green?", 2.0, block=3)
+    assert s.tick(3.0) == [("Brett Evans", "Is CI green?")]
+
+
+def test_a_rewrite_inside_the_same_block_after_settling_is_not_repeated():
+    s = CaptionSettler()
+    s.feed("Brett Evans", "Yo Snoop!", 0.0, block=1)
+    assert s.tick(1.0) == [("Brett Evans", "Yo Snoop!")]
+    s.feed("Brett Evans", "Yo, Snoop!", 1.1, block=1)                      # Meet touched it up late
+    assert s.tick(2.0) == []

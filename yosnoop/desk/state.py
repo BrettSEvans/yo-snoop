@@ -33,7 +33,7 @@ def strip_heard_wake(text: str) -> str:
 class DeskState:
     def __init__(self, holdoff_s: float = 1.0):
         self.holdoff, self.muted, self.stops = holdoff_s, False, 0
-        self._armed_until = float("-inf")
+        self._armed_until, self._armed_by = float("-inf"), None
         self._speaking_since, self._spoke_until = None, float("-inf")
 
     def speaking_started(self, t: float): self._speaking_since = t
@@ -47,15 +47,16 @@ class DeskState:
         """An utterance starting now can only be a stop (Snoop is talking, or just finished)."""
         return self._speaking_since is not None or start < self._spoke_until + self.holdoff
 
-    def on_utterance(self, text: str, start: float, end: float, heard_wake: bool = False) -> list:
-        """heard_wake: the Vosk wake check heard "yo snoop" at the start of this utterance."""
+    def on_utterance(self, text: str, start: float, end: float, heard_wake: bool = False, speaker=None) -> list:
+        """heard_wake: the Vosk wake check heard "yo snoop" at the start of this utterance.
+        speaker: who said it, when known (a Meet caption label); a bare wake arms Snoop for that speaker only."""
         if is_stop(text):
             self.muted, self.stops, self._armed_until = True, self.stops + 1, float("-inf")
             return [Stop()]
         if self.blocked(start):
             return []
         if not is_wake(text) and not heard_wake:
-            if start <= self._armed_until and text.strip():
+            if start <= self._armed_until and text.strip() and speaker == self._armed_by:
                 self._armed_until = float("-inf")
                 self.muted = False
                 return [Ask(text.strip(), self.stops)]
@@ -63,7 +64,7 @@ class DeskState:
         self.muted = False
         q = strip_wake(text) if is_wake(text) else strip_heard_wake(text)
         if not q:
-            self._armed_until = end + ARMED_S
+            self._armed_until, self._armed_by = end + ARMED_S, speaker
             return []
         self._armed_until = float("-inf")
         return [Ask(q, self.stops)]
